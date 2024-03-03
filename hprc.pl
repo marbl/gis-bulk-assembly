@@ -21,7 +21,7 @@ use hprc::samples;
 use hprc::aws;
 use hprc::list;
 #use hprc::status;
-#use hprc::fetch;
+use hprc::assemble;
 
 
 my $mode   = undef;
@@ -42,6 +42,11 @@ while (scalar(@ARGV) > 0) {
     elsif ($arg eq "--fetch")   {
         $mode  = "fetch";
 
+        if ((scalar(@ARGV) == 0) ||     #  If only '--fetch' and no
+            ($ARGV[0] =~ m/^-/)) {      #  data-type, default to 'all'.
+            $fetch{'all'} = 1;
+        }
+
         while ((scalar(@ARGV) > 0) &&   #  While more words
                ($ARGV[0] !~ m/^-/)) {   #  and not an option word,
             $fetch{ shift @ARGV } = 1;  #  add data-type to list of fetches.
@@ -60,6 +65,7 @@ while (scalar(@ARGV) > 0) {
     }
 
     elsif ($arg eq "--assemble") {
+      $mode = "assemble";
     }
 
     elsif ($arg eq "--post") {
@@ -128,10 +134,11 @@ elsif ($mode eq "read-stats") {
 elsif ($mode eq "status") {
 }
 
-else {
+elsif ($mode eq "assemble") {
+  foreach my $s (($sample)  or  (sort keys %samples)) {
+    startAssembly($s);
+  }
 }
 
-
-
-
-
+else {
+}

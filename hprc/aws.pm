@@ -13,7 +13,7 @@ package hprc::aws;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(fetchInfo fetchData);
+@EXPORT = qw(awsToLocalPath awsToLocalInfo fetchInfo fetchData);
 
 use strict;
 use warnings "all";
@@ -22,6 +22,27 @@ no  warnings "uninitialized";
 use hprc::samples;
 
 
+sub awsToLocalPath ($$) {
+  my $samp = shift @_;
+  my $locf = shift @_;
+
+  $locf =~ s!/!--!g;
+  $locf =~ s!^s3:----human-pangenomics--submissions--!aws-data/$samp/!;
+
+  return($locf);
+}
+
+sub awsToLocalInfo ($$) {
+  my $samp = shift @_;
+  my $info = shift @_;
+
+  $info =~ s!/!--!g;
+  $info =~ s!^s3:----human-pangenomics--submissions--!aws-info/$samp/!;
+  $info .= ".s3ls";
+
+  return($info);
+}
+
 #
 #  Given a sample name and a file, return the size of the file.
 #  Caches directory listings locally in 'aws-info'.
@@ -29,11 +50,7 @@ use hprc::samples;
 sub fetchInfo ($$) {
   my $samp = shift @_;
   my $file = shift @_;
-  my $info = $file;
-
-  $info =~ s!/!--!g;
-  $info =~ s!^s3:----human-pangenomics--submissions--!aws-info/$samp/!;
-  $info .= ".s3ls";
+  my $info = awsToLocalInfo($samp, $file);
 
   if (! -d "aws-info/$samp") {
     system("mkdir -p aws-info/$samp");
@@ -82,16 +99,9 @@ sub fetchData ($$) {
   }
 
   foreach my $f (@$files) {
-    my $awsf = $f;   #  So we don't accidentally corrupt the file list.
-    my $locf = $f;
-    my $awso = $f;
-    my $c;
-    my $r;
-
-    $locf =~ s!/!--!g;
-    $locf =~ s!^s3:----human-pangenomics--submissions--!aws-data/$samp/!;
- 
-    $awso =~ s!^s3://human-pangenomics/!!;
+    my $awsf = $f;                                     #  So we don't accidentally corrupt the file list.
+    my $locf = awsToLocalPath($samp, $f);
+    #y $awso = $f =~ s!^s3://human-pangenomics/!!/r;   #  Needed for s3api.
 
     if (-e $locf) {
       printf "Exists %7s/%-9s %s\n", $samp, "$type:", $locf;
@@ -100,10 +110,9 @@ sub fetchData ($$) {
 
     printf "Fetch  %7s/%-9s %s\n", $samp, "$type:", $locf;
 
-    $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
-    #  2147483648
-    $c = "aws --no-sign-request s3api get-object --bucket human-pangenomics --key '$awso' --range bytes=0-1048576 '$locf' > $locf.err 2>&1";
-    $r = system($c);
+    #y $c = "aws --no-sign-request s3api get-object --bucket human-pangenomics --key '$awso' --range bytes=0-1048576 '$locf' > $locf.err 2>&1";
+    my $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+    my $r = system($c);
 
     if ($r == 0) {
       next;

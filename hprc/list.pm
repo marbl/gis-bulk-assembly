@@ -37,7 +37,7 @@ sub pad ($$) {
 }
 
 
-sub siz ($$) {
+sub awssiz ($$) {
   my $sample = shift @_;
   my $files  = shift @_;
   my $size   = 0;
@@ -50,10 +50,38 @@ sub siz ($$) {
 }
 
 
+sub locsiz ($$) {
+  my $sample = shift @_;
+  my $files  = shift @_;
+  my $size   = 0;
+
+  foreach my $file (@$files) {
+    my $locf = awsToLocalPath($sample, $file);
+    $size += -s awsToLocalPath($sample, $file);
+  }
+
+  return $size / 1024.0 / 1024.0 / 1024.0;
+}
+
+
 sub displaySample ($) {
   my $s      = shift @_;
   my $awstot = 0;
   my $loctot = 0;
+
+  $awstot += awssiz($s, $samples{$s}{'hifi'});
+  $awstot += awssiz($s, $samples{$s}{'ont'});
+  $awstot += awssiz($s, $samples{$s}{'hic'});
+  $awstot += awssiz($s, $samples{$s}{'ilmn'});
+  $awstot += awssiz($s, $samples{$s}{'mat-ilmn'});
+  $awstot += awssiz($s, $samples{$s}{'pat-ilmn'});
+
+  $loctot += locsiz($s, $samples{$s}{'hifi'});
+  $loctot += locsiz($s, $samples{$s}{'ont'});
+  $loctot += locsiz($s, $samples{$s}{'hic'});
+  $loctot += locsiz($s, $samples{$s}{'ilmn'});
+  $loctot += locsiz($s, $samples{$s}{'mat-ilmn'});
+  $loctot += locsiz($s, $samples{$s}{'pat-ilmn'});
 
   printf("%7s (%s %s %s/%s %s/%s)\n",
          $s,
@@ -62,14 +90,15 @@ sub displaySample ($) {
          pad(-4, $samples{$s}{'superpop'}),  pad(4, $samples{$s}{'subpop'}),
          pad(-4, $samples{$s}{'prod_year'}),        $samples{$s}{'hifi_prod_site'});
   printf("                AWS / local (GB)\n");
-  printf("  HiFi:      %6.1f / %6.1f\n", siz($s, $samples{$s}{'hifi'}),     0);  $awstot += siz($s, $samples{$s}{'hifi'});
-  printf("  ONT:       %6.1f / %6.1f\n", siz($s, $samples{$s}{'ont'}),      0);  $awstot += siz($s, $samples{$s}{'ont'});
-  printf("  Hi-C:      %6.1f / %6.1f\n", siz($s, $samples{$s}{'hic'}),      0);  $awstot += siz($s, $samples{$s}{'hic'});
-  printf("  Ilmn:      %6.1f / %6.1f\n", siz($s, $samples{$s}{'ilmn'}),     0);  $awstot += siz($s, $samples{$s}{'ilmn'});
-  printf("  Ilmn(mat): %6.1f / %6.1f\n", siz($s, $samples{$s}{'mat-ilmn'}), 0);  $awstot += siz($s, $samples{$s}{'mat-ilmn'});
-  printf("  Ilmn(pat): %6.1f / %6.1f\n", siz($s, $samples{$s}{'pat-ilmn'}), 0);  $awstot += siz($s, $samples{$s}{'pat-ilmn'});
+  printf("  HiFi:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hifi'}),     locsiz($s, $samples{$s}{'hifi'}));
+  printf("  ONT:       %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ont'}),      locsiz($s, $samples{$s}{'ont'}));
+  printf("  Hi-C:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hic'}),      locsiz($s, $samples{$s}{'hic'}));
+  printf("  Ilmn:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ilmn'}),     locsiz($s, $samples{$s}{'ilmn'}));
+  printf("  Ilmn(mat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'mat-ilmn'}), locsiz($s, $samples{$s}{'mat-ilmn'}));
+  printf("  Ilmn(pat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'pat-ilmn'}), locsiz($s, $samples{$s}{'pat-ilmn'}));
   printf("             %6.1f / %6.1f\n", $awstot, $loctot);
   printf("\n");
+
 }
 
 1;
