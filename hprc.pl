@@ -20,7 +20,7 @@ use lib "$FindBin::RealBin";
 use hprc::samples;
 use hprc::aws;
 use hprc::list;
-#use hprc::status;
+use hprc::status;
 use hprc::assemble;
 
 
@@ -118,6 +118,9 @@ if ($mode eq "list") {
 }
 
 elsif ($mode eq "status") {
+  foreach my $s (($sample)  or  (sort keys %samples)) {
+    checkStatus($s);
+  }
 }
 
 elsif ($mode eq "fetch") {
