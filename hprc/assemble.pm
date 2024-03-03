@@ -144,7 +144,7 @@ sub startAssembly ($) {
   print CMD "echo ''\n";
   print CMD "echo 'NETWORKX VERSION'\n";
   print CMD "echo  > x.py 'from importlib.metadata import version'\n";
-  print CMD "echo >> x.py 'version(\\"networkx\\")'\n";
+  print CMD "echo >> x.py 'version(\\\"networkx\\\")'\n";
   print CMD "python x.py\n";
   print CMD "\n";
   print CMD "echo ''\n";
@@ -156,8 +156,8 @@ sub startAssembly ($) {
   print CMD "\n";
   print CMD "rm x.py\n";
   print CMD "\n";
-  print CMD "$root/software/verkko/bin/verkko -d . \\\n";
-  print CMD "  --slurm \\\n";
+  print CMD "$root/software/verkko/bin/verkko --slurm -d . \\\n";
+  print CMD "  --ovb-run 8 32 8 \\\n";
   print CMD "  --hifi $hifi \\\n";
   print CMD "  --nano $nano\n";
   print CMD "\n";
