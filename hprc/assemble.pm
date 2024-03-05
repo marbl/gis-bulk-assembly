@@ -29,6 +29,7 @@ sub getFiles ($$) {
   my $type  = shift @_;
   my $files = $samples{$samp}{$type};
   my @flist;
+  my @missing;
 
   foreach my $f (@$files) {
     my $awsf = $f;   #  So we don't accidentally corrupt the file list.
@@ -41,21 +42,34 @@ sub getFiles ($$) {
     $locn =~ s!^s3://human-pangenomics/submissions/!!;
 
     if (-e $locf) {
-      printf STDERR "OK      %8s:%s\n", $type, $locn;
+      #printf STDERR "OK      %8s:%s\n", $type, $locn;
       push @flist, $locf;
     } else {
-      printf STDERR "Missing %8s:%s\n", $type, $locn;
+      push @missing, "$type\0$locn";
     }
   }
 
   my $flist = join " \\\n         ", @flist;
 
+  if (scalar(@missing) > 0) {
+    print STDERR "Can't launch the assembly, inputs missing.\n";
+
+    foreach my $m (@missing) {
+      my ($t, $f) = split '\0', $m;
+
+      printf STDERR "  %8s - %s\n", $t, $f;
+    }
+
+    exit(1);
+  }
+
   return($flist);
 }
 
 
-sub startAssembly ($) {
-  my $samp = shift @_;
+sub startAssembly ($$) {
+  my $samp   = shift @_;
+  my $submit = shift @_;
 
   #  Make a place to work.
 
@@ -106,7 +120,7 @@ sub startAssembly ($) {
            ($state eq "CANCELLED") ||
            ($state eq "FAILED") ||
            ($state eq "TIMEOUT")) {
-      print STDERR "Job $jobid is in state $state.  Will submit again.\n";
+      #print STDERR "Job $jobid is in state $state.  Will submit again.\n";
     }
     else {
       print STDERR "Job $jobid is in state $state.  Not sure if I can safely submit again.\n";
@@ -129,6 +143,7 @@ sub startAssembly ($) {
   print CMD "\n";
   print CMD "module load winnowmap\n";
   print CMD "module load mashmap\n";
+  print CMD "module load samtools\n";
   print CMD "\n";
   print CMD "echo 'PYTHON VERSION:'\n";
   print CMD "command -v python\n";
@@ -164,7 +179,7 @@ sub startAssembly ($) {
   close(CMD);
 
   print STDOUT "sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid\n";
-  #system("sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid 2>&1");
+  system("sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid 2>&1")   if ($submit);
 }
 
 

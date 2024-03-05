@@ -21,7 +21,7 @@ no  warnings "uninitialized";
 
 use hprc::samples;
 
-my $root = -e "/data/walenzbp/hprc" ? "" : ".";
+my $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc" : ".";
 
 
 #  Returns the Slurm JobID of the last known running verkko command,
@@ -31,12 +31,14 @@ sub findJobID ($) {
   my $samp = shift @_;
   my $jid  = undef;
 
+  print "Query $root/assemblies/$samp.jid.\n";
   if (-e "$root/assemblies/$samp.jid") {
     open(JID, "< $root/assemblies/$samp.jid") or die "Failed to open '$root/assemblies/$samp.jid' for reading: $!\n";
-    my $jid = int(<JID>);
+    $jid = int(<JID>);
     close(JID);
   }
 
+  die "No job id.\n" if (!defined($jid));
   return($jid);
 }
 
@@ -102,8 +104,8 @@ sub checkStatus ($) {
 
   #  Find jobid.
 
-  my $jid  = findJobID($samp);
-  my $stat = findJobStatus($samp, $jid);
+  #my $jid  = findJobID($samp);
+  #my $stat = findJobStatus($samp, $jid);
 
   #  Find logs.
 
@@ -133,9 +135,10 @@ sub checkStatus ($) {
     my $date;
     my $rule;
     my $jobnum;
-    my $jobid;
 
     my $submit;
+
+    my @tids;
 
     my %tid2jid;
     my %tid2rule;
@@ -144,7 +147,9 @@ sub checkStatus ($) {
     my %resubmit;
     my %completed;
 
-    #print STDERR "Scan $log\n";
+    print "\n";
+    print "Scan $log\n";
+    print "\n";
 
     open(LOG, "< $log") or die "Failed to open log '$log' for reading: $!\n";
     while (<LOG>) {
@@ -160,7 +165,7 @@ sub checkStatus ($) {
 
       if ((m/^rule\s+(.*):/) ||
           (m/^localrule\s+(.*):/) ||
-          (m/^localcheckpoint\s+(.*):/)) {
+          (m/^checkpoint\s+(.*):/)) {
         $rule = $1;
       }
 
@@ -168,11 +173,16 @@ sub checkStatus ($) {
       #  Job completion.
       #
 
-      if (m/^Finished\sjob\s(\d+).$/) {
+      if ((m/^Finished\sjob\s(\d+).$/) ||
+          (m/^Error\sexecuting.*jobid:\s+(\d+),\s/)) {
         my $tid = $1;  #sprintf("tid%04d", $1);
         my $jid = $tid2jid{$tid};
         my $jid1;
         my $jid2;
+        my $status;
+
+        if (m/Finished/)  {  $status = "OK  "; }
+        if (m/Error/)     {  $status = "FAIL"; }
 
         if ($jid =~ m/^([jid]{0,3}\d+),([jid]{0,3}\d+)$/) {
           $jid1 = $1;
@@ -192,21 +202,29 @@ sub checkStatus ($) {
         my $c = $completed{$tid};
 
         if (defined($r)) {
-          printf "%-9s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+          printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
               $tid,
+              $status,
               $tid2rule{$tid},
               $jid1, $s,
               $jid2, $r,
               $jid2, $c;
         }
         else {
-          printf "%-9s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+          printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
               $tid,
+              $status,
               $tid2rule{$tid},
               $jid1, $s,
               "", "",
               $jid2, $c;
         }
+
+        delete $tid2jid{$tid};
+        delete $tid2rule{$tid};
+        delete $submitted{$tid};
+        delete $resubmit {$tid};
+        delete $completed{$tid};
       }
 
       #
@@ -233,8 +251,8 @@ sub checkStatus ($) {
         my $jid = $2;  #sprintf("jid%08d", $2);
 
         if (exists($tid2jid{$tid})) {
-          $tid2jid{$tid} = "$tid2jid{$tid},$jid";
-          $resubmit{$tid} = $date;
+          $tid2jid{$tid}   = "$tid2jid{$tid},$jid";
+          $resubmit{$tid}  = $date;
         }
         else {
           $tid2jid{$tid}   = $jid;
@@ -244,17 +262,44 @@ sub checkStatus ($) {
       }
     }
     close(LOG);
+
+
+    foreach my $tid (keys %tid2jid) {
+      my $jid = $tid2jid{$tid};
+      my $jid1;
+      my $jid2;
+
+      if ($jid =~ m/^([jid]{0,3}\d+),([jid]{0,3}\d+)$/) {
+        $jid1 = $1;
+        $jid2 = $2;
+      }
+      else {
+        $jid1 = $jid;
+        $jid2 = $jid;
+      }
+
+      my $s = $submitted{$tid};
+      my $r = $resubmit {$tid};
+      my $c = $completed{$tid};
+
+      if (defined($r)) {
+        printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+            $tid,
+            $tid2rule{$tid},
+            $jid1, $s,
+            $jid2, $r,
+            "", "";
+      }
+      else {
+        printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+            $tid,
+            $tid2rule{$tid},
+            $jid1, $s,
+            "", "",
+            "", "";
+      }
+    }
   }
-
-
-  #print "--\n";
-  #print "Status for $samp\n";
-
-
-
-  #foreach my $log (@logs) {
-  #}
 }
-
 
 1;

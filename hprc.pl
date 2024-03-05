@@ -1,14 +1,14 @@
 #!/usr/bin/env perl
 
 ###############################################################################
- #
- #  This file is part of a pipeline to (help) run Verkko assemblies on
- #  numerous HPRC samples.
- #
- #  This is a 'United States Government Work', and is released in the public
- #  domain.
- #
- ##
+#
+#  This file is part of a pipeline to (help) run Verkko assemblies on
+#  numerous HPRC samples.
+#
+#  This is a 'United States Government Work', and is released in the public
+#  domain.
+#
+##
 
 use strict;
 use warnings "all";
@@ -24,64 +24,97 @@ use hprc::status;
 use hprc::assemble;
 
 
-my $mode   = undef;
-my $sample = undef;
-my %fetch;
-
-my $help   = undef;
 my @errs;
+my $mode = (scalar(@ARGV) > 0) ? shift @ARGV : "help";
+
+my $submit = 0;
+my %sampleList;
+my %fetchList;
+
+#
+#  Load the sample list.
+#
+
+#oadSamples("batch-1-test.tsv");
+loadSamples("batch-2-with-hic.tsv");
+
+#
+#  Parse args.
+#
 
 while (scalar(@ARGV) > 0) {
-    my $arg = $ARGV[0];  shift @ARGV;
+  my $arg = $ARGV[0];  shift @ARGV;
 
-    if    ($arg eq "--help")    { $help = "help";          }
-    elsif ($arg eq "--list")    { $mode = "list";          }
-    elsif ($arg eq "--status")  { $mode = "status";        }
-    elsif ($arg eq "--sample")  { $sample = shift @ARGV;   }
-
-    elsif ($arg eq "--fetch")   {
-        $mode  = "fetch";
-
-        if ((scalar(@ARGV) == 0) ||     #  If only '--fetch' and no
-            ($ARGV[0] =~ m/^-/)) {      #  data-type, default to 'all'.
-            $fetch{'all'} = 1;
-        }
-
-        while ((scalar(@ARGV) > 0) &&   #  While more words
-               ($ARGV[0] !~ m/^-/)) {   #  and not an option word,
-            $fetch{ shift @ARGV } = 1;  #  add data-type to list of fetches.
-        }
-
-        if (exists($fetch{'all'})) {
-            $fetch{$_} = 1   foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
-            delete $fetch{'all'};
-        }
+  if ($arg eq "--sample")  {
+    while ((scalar(@ARGV) > 0) &&      #  While more words
+           ($ARGV[0] !~ m/^-/)) {      #  and not an option word,
+      $sampleList{ shift @ARGV } = 1;  #  add sample to the list
     }
+  }
 
-    elsif ($arg eq "--read-stats") {
+  elsif (($mode eq "fetch") && ($arg eq "--type")) {
+    while ((scalar(@ARGV) > 0) &&     #  While more words
+           ($ARGV[0] !~ m/^-/)) {     #  and not an option word,
+      $fetchList{ shift @ARGV } = 1;  #  add data-type to the list
     }
+  }
 
-    elsif ($arg eq "--trio") {
-    }
+  elsif (($mode eq "assemble") && ($arg eq "--submit")) {
+    $submit = 1;
+  }
 
-    elsif ($arg eq "--assemble") {
-      $mode = "assemble";
-    }
-
-    elsif ($arg eq "--post") {
-    }
-
-    else {
-        push @errs, "unknown option '$arg'";
-        $help = 1;
-    }
+  else {
+    push @errs, "unknown option '$arg'";
+  }
 }
 
-foreach my $f (keys %fetch) {   #  Check for invalid fetch options.
+
+
+#
+#  Expand sample 'all' to include all known samples and check for invalid ones.
+#
+if ((scalar(keys %sampleList) == 0) ||   #  If no samples supplied, or
+    (exists($sampleList{'all'}))) {      #  'all' explicitly requested,
+  foreach my $s (keys %samples) {        #  add all known samples to our list.
+    $sampleList{$s} = 1;
+  }
+
+  delete $sampleList{'all'};
+}
+{
+  my @missing;
+
+  foreach my $s (sort keys %sampleList) {
+    push @missing, $s   if (!exists($samples{$s}));
+  }
+
+  if (scalar(@missing) > 0) {
+    my $ss = (scalar(@missing) == 1) ? "" : "s";
+    my $ms = "'" . (shift @missing) . "'";
+    my $ls = pop @missing;
+    foreach my $s (@missing) {
+      $ms .= ", '$s'";
+    }
+    $ms .= " and '$ls'"  if (defined($ls));
+
+    push @errs, "Sample$ss $ms not known.\n";
+  }
+}
+
+
+
+#
+#  Expand fetch options and check for invalid ones.
+#
+if (exists($fetchList{'all'})) {
+  $fetchList{$_} = 1   foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
+  delete $fetchList{'all'};
+}
+foreach my $f (keys %fetchList) {   #  Check for invalid fetch options.
   if (($f ne 'hifi') && ($f ne 'ont') && ($f ne 'hic') && ($f ne 'ilmn') &&
       ($f ne 'mat-ilmn') && ($f ne 'pat-ilmn')) {
-    delete $fetch{$_}  foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
-    push @errs, "Invalid '--fetch' options '" . join("', '", sort keys %fetch) . "'.";
+    delete $fetchList{$_}  foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
+    push @errs, "Invalid '--fetch' options '" . join("', '", sort keys %fetchList) . "'.";
     push @errs, "  Must be one of:";
     push @errs, "    'all'                         (everything)";
     push @errs, "    'hifi', 'ont', 'hic', 'ilmn', (child)";
@@ -90,42 +123,53 @@ foreach my $f (keys %fetch) {   #  Check for invalid fetch options.
   }
 }
 
-if (($help ne undef) || ($mode eq undef) || (scalar(@errs) > 0)) {
-    print "usage: $0 [...]";
-    print "  --list              - list all known samples\n";
-    print "  --status            - show status of all samples\n";
-    print "  --sample [sample]   - restrict operation to a single sample\n";
-    print "\n";
-    print "ERROR: $_\n"  foreach (@errs);
-    exit(1);
+#
+#  Check for invalid modes.
+#
+
+if (($mode ne "help") &&
+    ($mode ne "list") &&
+    ($mode ne "status") &&
+    ($mode ne "fetch") &&
+    ($mode ne "stats") &&
+    ($mode ne "trio") &&
+    ($mode ne "assemble")) {
+  push @errs, "Invalid mode '$mode'.\n";
 }
 
-
-#oadSamples("batch-1-test.tsv");
-loadSamples("batch-2-with-hic.tsv");
-
-if (defined($sample) && !exists($samples{$sample})) {
-    die "ERROR: sample '$sample' not known.\n";
+if (($mode eq "help") || (scalar(@errs) > 0)) {
+  print "usage: $0 mode [options]";
+  print "  MODES:\n";
+  print "    list\n";
+  print "    status\n";
+  print "    fetch\n";
+  print "    stats\n";    #  --reads or --assembly
+  print "    trio\n";
+  print "    assemble\n";
+  print "\n";
+  print "  OPTIONS:\n";
+  print "  --sample [sample ...]   - restrict operation to the specified samples\n";
+  print "\n";
+  print "ERROR: $_\n"  foreach (@errs);
+  exit(1);
 }
-
-
 
 
 if ($mode eq "list") {
-  foreach my $s (($sample)  or  (sort keys %samples)) {
+  foreach my $s (sort keys %sampleList) {
     displaySample($s);
   }
 }
 
 elsif ($mode eq "status") {
-  foreach my $s (($sample)  or  (sort keys %samples)) {
+  foreach my $s (sort keys %sampleList) {
     checkStatus($s);
   }
 }
 
 elsif ($mode eq "fetch") {
-  foreach my $s (($sample)  or  (sort keys %samples)) {
-    foreach my $f (sort keys %fetch) {
+  foreach my $s (sort keys %sampleList) {
+    foreach my $f (sort keys %fetchList) {
       fetchData($s, $f);
     }
   }
@@ -138,8 +182,8 @@ elsif ($mode eq "status") {
 }
 
 elsif ($mode eq "assemble") {
-  foreach my $s (($sample)  or  (sort keys %samples)) {
-    startAssembly($s);
+  foreach my $s (sort keys %sampleList) {
+    startAssembly($s, $submit);
   }
 }
 
