@@ -98,8 +98,9 @@ sub findJobStatus ($$) {
 }
 
 
-sub checkStatus ($) {
+sub checkStatus ($$) {
   my $samp = shift @_;
+  my $opts = shift @_;
   my @logs;
 
   #  Find jobid.

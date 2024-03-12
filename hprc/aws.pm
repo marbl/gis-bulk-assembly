@@ -85,9 +85,10 @@ sub fetchInfo ($$) {
 #
 #  Given a sample name and a file type, fetches all the files into
 #  
-sub fetchData ($$) {
+sub fetchData ($$$) {
   my $samp  = shift @_;
   my $type  = shift @_;
+  my $opts   = shift @_;
   my $files = $samples{$samp}{$type};
 
   #print STDERR "\n";

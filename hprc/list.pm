@@ -64,24 +64,31 @@ sub locsiz ($$) {
 }
 
 
-sub displaySample ($) {
+sub displayFiles ($$$) {
+  my $sample = shift @_;
+  my $files  = shift @_;
+  my $opts   = shift @_;
+
+  return  if (! exists($$opts{"files"}));
+
+  foreach my $file (@$files) {
+    my $locf = awsToLocalPath($sample, $file);
+    print "                    - $locf\n";
+  }
+}
+
+
+sub displaySample ($$$) {
   my $s      = shift @_;
+  my $types  = shift @_;
+  my $opts   = shift @_;
   my $awstot = 0;
   my $loctot = 0;
 
-  $awstot += awssiz($s, $samples{$s}{'hifi'});
-  $awstot += awssiz($s, $samples{$s}{'ont'});
-  $awstot += awssiz($s, $samples{$s}{'hic'});
-  $awstot += awssiz($s, $samples{$s}{'ilmn'});
-  $awstot += awssiz($s, $samples{$s}{'mat-ilmn'});
-  $awstot += awssiz($s, $samples{$s}{'pat-ilmn'});
-
-  $loctot += locsiz($s, $samples{$s}{'hifi'});
-  $loctot += locsiz($s, $samples{$s}{'ont'});
-  $loctot += locsiz($s, $samples{$s}{'hic'});
-  $loctot += locsiz($s, $samples{$s}{'ilmn'});
-  $loctot += locsiz($s, $samples{$s}{'mat-ilmn'});
-  $loctot += locsiz($s, $samples{$s}{'pat-ilmn'});
+  foreach my $t (keys %$types) {
+    $awstot += awssiz($s, $samples{$s}{$t});
+    $loctot += locsiz($s, $samples{$s}{$t});
+  }
 
   printf("%7s (%s %s %s/%s %s/%s)\n",
          $s,
@@ -90,15 +97,14 @@ sub displaySample ($) {
          pad(-4, $samples{$s}{'superpop'}),  pad(4, $samples{$s}{'subpop'}),
          pad(-4, $samples{$s}{'prod_year'}),        $samples{$s}{'hifi_prod_site'});
   printf("                AWS / local (GB)\n");
-  printf("  HiFi:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hifi'}),     locsiz($s, $samples{$s}{'hifi'}));
-  printf("  ONT:       %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ont'}),      locsiz($s, $samples{$s}{'ont'}));
-  printf("  Hi-C:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hic'}),      locsiz($s, $samples{$s}{'hic'}));
-  printf("  Ilmn:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ilmn'}),     locsiz($s, $samples{$s}{'ilmn'}));
-  printf("  Ilmn(mat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'mat-ilmn'}), locsiz($s, $samples{$s}{'mat-ilmn'}));
-  printf("  Ilmn(pat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'pat-ilmn'}), locsiz($s, $samples{$s}{'pat-ilmn'}));
+  if (exists($$types{'hifi'}))      { printf("  HiFi:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hifi'}),     locsiz($s, $samples{$s}{'hifi'}));       displayFiles($s, $samples{$s}{'hifi'},     $opts); }
+  if (exists($$types{'ont'}))       { printf("  ONT:       %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ont'}),      locsiz($s, $samples{$s}{'ont'}));        displayFiles($s, $samples{$s}{'ont'},      $opts); }
+  if (exists($$types{'hic'}))       { printf("  Hi-C:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'hic'}),      locsiz($s, $samples{$s}{'hic'}));        displayFiles($s, $samples{$s}{'hic'},      $opts); }
+  if (exists($$types{'ilmn'}))      { printf("  Ilmn:      %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'ilmn'}),     locsiz($s, $samples{$s}{'ilmn'}));       displayFiles($s, $samples{$s}{'ilmn'},     $opts); }
+  if (exists($$types{'mat-ilmn'}))  { printf("  Ilmn(mat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'mat-ilmn'}), locsiz($s, $samples{$s}{'mat-ilmn'}));   displayFiles($s, $samples{$s}{'mat-ilmn'}, $opts); }
+  if (exists($$types{'pat-ilmn'}))  { printf("  Ilmn(pat): %6.1f / %6.1f\n", awssiz($s, $samples{$s}{'pat-ilmn'}), locsiz($s, $samples{$s}{'pat-ilmn'}));   displayFiles($s, $samples{$s}{'pat-ilmn'}, $opts); }
   printf("             %6.1f / %6.1f\n", $awstot, $loctot);
   printf("\n");
-
 }
 
 1;

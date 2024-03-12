@@ -13,7 +13,7 @@ package hprc::assemble;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(startAssembly checkAssembly);
+@EXPORT = qw(getFiles startAssembly checkAssembly);
 
 use strict;
 use warnings "all";
@@ -27,9 +27,23 @@ my $root = "/data/walenzbp/hprc";
 sub getFiles ($$) {
   my $samp  = shift @_;
   my $type  = shift @_;
+  my $hics;
+  my $hici;
+
+  if      ($type eq "hic1") {     #  If asked for a specific Hi-C end, make
+    $hics = "_R1_001.fastq.gz";   #  two extensions, one that we want to SAVE,
+    $hici = "_R2_001.fastq.gz";   #  one that we want to INGORE.  We'll flag
+    $type = "hic";                #  anything not in either of those as 'missing',
+  } elsif ($type eq "hic2") {
+    $hics = "_R2_001.fastq.gz";
+    $hici = "_R1_001.fastq.gz";
+    $type = "hic";
+  }
+
   my $files = $samples{$samp}{$type};
   my @flist;
   my @missing;
+  my @failed;
 
   foreach my $f (@$files) {
     my $awsf = $f;   #  So we don't accidentally corrupt the file list.
@@ -41,18 +55,42 @@ sub getFiles ($$) {
 
     $locn =~ s!^s3://human-pangenomics/submissions/!!;
 
-    if (-e $locf) {
-      #printf STDERR "OK      %8s:%s\n", $type, $locn;
-      push @flist, $locf;
-    } else {
-      push @missing, "$type\0$locn";
+    #  Some rather complicated rules to decide if the file is present, missing
+    #  or if we're confused.
+
+    if   (!defined($hics) && (-e $locf)) {                          #  If not a Hi-C type,
+      push @flist, $locf;                                           #  save if it exists.
+    }                                                               #
+    elsif (defined($hics) && (-e $locf) && ($locn =~ m/$hics$/)) {  #  If a Hi-C type, and we care
+      push @flist, $locf;                                           #  about it, save if if exists.
+    }                                                               #
+    elsif (defined($hics)               && ($locn =~ m/$hici$/)) {  #  But ignore if it is the Hi-C
+      ;                                                             #  end we don't care about.
+    }                                                               #
+    elsif (defined($hics)) {                                        #  Throw an error if it is a
+      push @failed, "$type\0$locn";                                 #  file we don't recognize as
+    }                                                               #  Hi-C.
+    else {                                                          #
+      push @missing, "$type\0$locn";                                #  Or declare we're missing the file.
     }
   }
 
   my $flist = join " \\\n         ", @flist;
 
+  if (scalar(@failed) > 0) {
+    print STDERR "Can't launch the assembly, confused by Hi-C inpute:\n";
+
+    foreach my $m (@failed) {
+      my ($t, $f) = split '\0', $m;
+
+      printf STDERR "  %8s - %s\n", $t, $f;
+    }
+
+    exit(1);
+  }
+
   if (scalar(@missing) > 0) {
-    print STDERR "Can't launch the assembly, inputs missing.\n";
+    print STDERR "Can't launch the assembly, inputs missing:\n";
 
     foreach my $m (@missing) {
       my ($t, $f) = split '\0', $m;
@@ -67,27 +105,15 @@ sub getFiles ($$) {
 }
 
 
-sub startAssembly ($$) {
-  my $samp   = shift @_;
-  my $submit = shift @_;
 
-  #  Make a place to work.
+sub isRunning ($$) {
+  my $samp = shift @_;
+  my $flav = shift @_;
 
-  if (! -d "$root/assemblies/$samp") {
-    system("mkdir -p $root/assemblies/$samp");
-  }
-
-  #  Check that inputs exist.
-
-  my $hifi = getFiles($samp, "hifi");
-  my $nano = getFiles($samp, "ont");
-
-  #  Make sure it isn't running.
-
-  if (-e "$root/assemblies/$samp.jid") {
+  if (-e "$root/assemblies/$samp-$flav.jid") {
     my ($jobid, $state, $reason, $out) = (undef, undef, undef, undef);
 
-    open(JID, "< $root/assemblies/$samp.jid") or die "Failed to open '$root/assemblies/$samp.jid' for reading: $!\n";
+    open(JID, "< $root/assemblies/$samp-$flav.jid") or die "Failed to open '$root/assemblies/$samp-$flav.jid' for reading: $!\n";
     my $jid = int(<JID>);
     close(JID);
 
@@ -101,20 +127,20 @@ sub startAssembly ($$) {
 
     if (!defined($jobid)) {
       print STDERR "Didn't get a report for job $jid from Slurm.  Can't check if I can safely submit.\n";
-      exit(0);
+      return 1;
     }
 
     if    (($state eq "CONFIGURING") ||
            ($state eq "PENDING")) {
       print STDERR "Job $jobid is in state $state.  Cannot submit it again.\n";
-      exit(0);
+      return 1;
     }
     elsif (($state eq "RUNNING") ||
            ($state eq "COMPLETING") ||
            ($state eq "STOPPED") ||
            ($state eq "SUSPENDED")) {
       print STDERR "Job $jobid is in state $state.  Cannot submit it again.\n";
-      exit(0);
+      return 1;
     }
     elsif (($state eq "COMPLETED") ||
            ($state eq "CANCELLED") ||
@@ -124,27 +150,81 @@ sub startAssembly ($$) {
     }
     else {
       print STDERR "Job $jobid is in state $state.  Not sure if I can safely submit again.\n";
-      exit(0);
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+
+
+sub startAssembly ($$) {
+  my $samp   = shift @_;
+  my $opts   = shift @_;
+  my $submit = exists $$opts{"submit"};
+
+  #  Make a place to work.
+
+  if (! -d "$root/assemblies/$samp") {
+    system("mkdir -p $root/assemblies/$samp");
+  }
+
+  #  Check that inputs exist.
+
+  my $hifi = getFiles($samp, "hifi");
+  my $nano = getFiles($samp, "ont");
+
+  my $mati = getFiles($samp, "mat-ilmn");
+  my $pati = getFiles($samp, "pat-ilmn");
+
+  my $hic1 = getFiles($samp, "hic1");
+  my $hic2 = getFiles($samp, "hic2");
+
+  #  Decide which flavor of assembly to run.
+
+  my @flavors;
+
+  if (exists($$opts{"verkko-trio"}) &&
+      exists($$opts{"verkko-hi-c"}))  {
+    delete $$opts{"verkko-trio"};     #  Hi-C needs to run after trio, and they're
+    delete $$opts{"verkko-hi-c"};     #  thus put into the same single run.
+    push @flavors, "verkko";
+  }
+
+  if (exists($$opts{"canu-trio"}))    {  push @flavors, "canu-trio";    }
+  if (exists($$opts{"canu-hifi"}))    {  push @flavors, "canu-hifi";    }
+  if (exists($$opts{"verkko-trio"}))  {  push @flavors, "verkko-trio";  }
+  if (exists($$opts{"verkko-hi-c"}))  {  push @flavors, "verkko-hi-c";  }
+
+  if (scalar(@flavors) == 0)          {  push @flavors, "verkko";       }
+
+  #  Make sure it isn't running.
+  #    Does NOT work for Canu assemblies, or when a default verkko trio+hi-c
+  #    assembly is started, then a verkko-trio is run.  So really of use only
+  #    for the expected usual case of no assembly flavor specified on the
+  #    command line.
+  #
+  foreach my $flav (@flavors) {
+    if (isRunning($samp, $flav)) {
+      return;
     }
   }
 
   #  Launch.
 
-  open(CMD, "> $root/assemblies/$samp.sh") or die "Failed to open 'assemblies/$samp.sh' for writing: $!\n";
-  print CMD "#!/bin/sh\n";
-  print CMD "#\n";
-  print CMD "#SBATCH --cpus-per-task=2\n";
-  print CMD "#SBATCH --mem=16g\n";
-  print CMD "#SBATCH --time=4-0\n";
-  print CMD "#SBATCH --output=$root/assemblies/$samp.%j.log\n";
-  print CMD "#SBATCH --job-name=verkko$samp\n";
-  print CMD "#\n";
-  print CMD "cd $root/assemblies/$samp\n";
-  print CMD "\n";
-  print CMD "module load winnowmap\n";
-  print CMD "module load mashmap\n";
-  print CMD "module load samtools\n";
-  print CMD "\n";
+  foreach my $flav (@flavors) {
+    if ($flav eq "canu-trio")    { submitCanuTrio  ($samp,        $nano, $mati, $pati, $submit); }
+    if ($flav eq "canu-hifi")    { submitCanuHiFi  ($samp, $hifi,                      $submit); }
+    if ($flav eq "verkko")       { submitVerkko    ($samp, $hifi, $nano, $hic1, $hic2, $submit); }
+    if ($flav eq "verkko-trio")  { submitVerkkoTrio($samp, $hifi,                      $submit); }   #  Trio DBs implicitly exist.
+    if ($flav eq "verkko-hi-c")  { submitVerkkoHiC ($samp, $hifi, $nano, $hic1, $hic2, $submit); }
+  }
+}
+
+
+
+sub emitPythonTest () {
   print CMD "echo 'PYTHON VERSION:'\n";
   print CMD "command -v python\n";
   print CMD "python --version\n";
@@ -159,7 +239,7 @@ sub startAssembly ($$) {
   print CMD "echo ''\n";
   print CMD "echo 'NETWORKX VERSION'\n";
   print CMD "echo  > x.py 'from importlib.metadata import version'\n";
-  print CMD "echo >> x.py 'version(\\\"networkx\\\")'\n";
+  print CMD "echo >> x.py 'version(\"networkx\")'\n";
   print CMD "python x.py\n";
   print CMD "\n";
   print CMD "echo ''\n";
@@ -171,19 +251,272 @@ sub startAssembly ($$) {
   print CMD "\n";
   print CMD "rm x.py\n";
   print CMD "\n";
-  print CMD "$root/software/verkko/bin/verkko --slurm -d . \\\n";
-  print CMD "  --ovb-run 8 32 8 \\\n";
-  print CMD "  --hifi $hifi \\\n";
-  print CMD "  --nano $nano\n";
-  print CMD "\n";
-  close(CMD);
-
-  print STDOUT "sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid\n";
-  system("sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid 2>&1")   if ($submit);
 }
 
 
-sub checkAssembly ($$) {
+
+sub submitCanuTrio ($$$$$$) {
+  my $samp = shift @_;
+  my $nano = shift @_;
+  my $mati = shift @_;
+  my $pati = shift @_;
+  my $subm = shift @_;
+
+  open(CMD, "> $root/assemblies/$samp-canu-trio.sh") or die "Failed to open 'assemblies/$samp-canu-samp.sh' for writing: $!\n";
+  print CMD "#!/bin/sh\n";
+  print CMD "\n";
+  print CMD "cd $root/assemblies/\n";
+  print CMD "\n";
+  print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+  print CMD "\n";
+  print CMD "module load samtools\n";
+  print CMD "\n";
+  print CMD "$root/software/canu/build/bin/canu -p asm -d $samp-canu-trio \\\n";
+  print CMD "  genomeSize=3.1g useGrid=true gridOptionsJobName=ct$samp \\\n";
+  print CMD "  gridOptionsOvl=\"-t 6-0\" \\\n";
+  print CMD "  -haplotypeMAT $mati \\\n";
+  print CMD "  -haplotypePAT $pati \\\n";
+  print CMD "  -nanopore $nano \n";
+  print CMD "\n";
+  close (CMD);
+
+  print STDOUT "sh $root/assemblies/$samp-canu-trio.sh > $root/assemblies/$samp-canu-trio.err\n";
+  system("sh $root/assemblies/$samp-canu-trio.sh > $root/assemblies/$samp-canu-trio.err 2>&1")   if ($subm);
+}
+
+
+
+sub submitCanuHiFi ($$$$$$) {
+  my $samp = shift @_;
+  my $hifi = shift @_;
+  my $subm = shift @_;
+
+  open(CMD, "> $root/assemblies/$samp-canu-hifi.sh") or die "Failed to open 'assemblies/$samp-canu-hifi.sh' for writing: $!\n";
+  print CMD "#!/bin/sh\n";
+  print CMD "\n";
+  print CMD "cd $root/assemblies/\n";
+  print CMD "\n";
+  print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+  print CMD "\n";
+  print CMD "$root/software/canu/build/bin/canu -p asm -d $samp-canu-hifi \\\n";
+  print CMD "  genomeSize=3.1g useGrid=true gridOptionsJobName=ch$samp \\\n";
+  print CMD "  gridOptionsOvl=\"-t 4-0\" \\\n";
+  print CMD "  -pacbio-hifi $hifi \n";
+  print CMD "\n";
+  close (CMD);
+
+  print STDOUT "sh $root/assemblies/$samp-canu-hifi.sh > $root/assemblies/$samp-canu-hifi.err\n";
+  system("sh $root/assemblies/$samp-canu-hifi.sh > $root/assemblies/$samp-canu-hifi.err 2>&1")   if ($subm);
+}
+
+
+
+sub submitVerkko ($$$$$$) {
+  my $samp = shift @_;
+  my $hifi = shift @_;
+  my $nano = shift @_;
+  my $hic1 = shift @_;
+  my $hic2 = shift @_;
+  my $subm = shift @_;
+
+  open(CMD, "> $root/assemblies/$samp.sh") or die "Failed to open 'assemblies/$samp.sh' for writing: $!\n";
+  print CMD "#!/bin/sh\n";
+  print CMD "#\n";
+  print CMD "#SBATCH --cpus-per-task=2\n";
+  print CMD "#SBATCH --mem=16g\n";
+  print CMD "#SBATCH --time=4-0\n";
+  print CMD "#SBATCH --output=$root/assemblies/$samp.%j.log\n";
+  print CMD "#SBATCH --job-name=va$samp\n";
+  print CMD "#\n";
+  print CMD "set -e\n";
+  print CMD "set -x\n";
+  print CMD "\n";
+  print CMD "cd $root/assemblies/$samp\n";
+  print CMD "\n";
+  print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+  print CMD "\n";
+  print CMD "module load winnowmap\n";
+  print CMD "module load mashmap\n";
+  print CMD "module load samtools\n";
+  print CMD "module load bwa\n";
+  print CMD "module load seqtk\n";
+  print CMD "\n";
+  emitVerkkoTrio();
+  emitVerkkoHiC();
+
+  print STDOUT "sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid\n";
+  system("sbatch $root/assemblies/$samp.sh > $root/assemblies/$samp.jid 2>&1")   if ($subm);
+}
+
+
+
+sub submitVerkkoTrio ($$$$$$) {
+  my $samp = shift @_;
+  my $hifi = shift @_;
+  my $subm = shift @_;
+
+  open(CMD, "> $root/assemblies/$samp-trio.sh") or die "Failed to open 'assemblies/$samp-trio.sh' for writing: $!\n";
+  print CMD "#!/bin/sh\n";
+  print CMD "#\n";
+  print CMD "#SBATCH --cpus-per-task=2\n";
+  print CMD "#SBATCH --mem=16g\n";
+  print CMD "#SBATCH --time=4-0\n";
+  print CMD "#SBATCH --output=$root/assemblies/$samp-trio.%j.log\n";
+  print CMD "#SBATCH --job-name=vt$samp\n";
+  print CMD "#\n";
+  print CMD "set -e\n";
+  print CMD "set -x\n";
+  print CMD "\n";
+  print CMD "cd $root/assemblies/$samp\n";
+  print CMD "\n";
+  print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+  print CMD "\n";
+  print CMD "module load winnowmap\n";
+  print CMD "module load mashmap\n";
+  print CMD "module load samtools\n";
+  print CMD "module load bwa\n";
+  print CMD "module load seqtk\n";
+  print CMD "\n";
+  emitVerkkoTrio($hifi);
+  #mitVerkkoHiC($hifi, $nano, $hic1, $hic2);
+
+  print STDOUT "sbatch $root/assemblies/$samp-trio.sh > $root/assemblies/$samp-trio.jid\n";
+  system("sbatch $root/assemblies/$samp-trio.sh > $root/assemblies/$samp-trio.jid 2>&1")   if ($subm);
+}
+
+
+
+sub submitVerkkoHiC ($$$$$$) {
+  my $samp = shift @_;
+  my $hifi = shift @_;
+  my $nano = shift @_;
+  my $hic1 = shift @_;
+  my $hic2 = shift @_;
+  my $subm = shift @_;
+
+  open(CMD, "> $root/assemblies/$samp-hic.sh") or die "Failed to open 'assemblies/$samp-hic.sh' for writing: $!\n";
+  print CMD "#!/bin/sh\n";
+  print CMD "#\n";
+  print CMD "#SBATCH --cpus-per-task=2\n";
+  print CMD "#SBATCH --mem=16g\n";
+  print CMD "#SBATCH --time=4-0\n";
+  print CMD "#SBATCH --output=$root/assemblies/$samp-hic.%j.log\n";
+  print CMD "#SBATCH --job-name=vh$samp\n";
+  print CMD "#\n";
+  print CMD "set -e\n";
+  print CMD "set -x\n";
+  print CMD "\n";
+  print CMD "cd $root/assemblies/$samp\n";
+  print CMD "\n";
+  print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+  print CMD "\n";
+  print CMD "module load winnowmap\n";
+  print CMD "module load mashmap\n";
+  print CMD "module load samtools\n";
+  print CMD "module load bwa\n";
+  print CMD "module load seqtk\n";
+  print CMD "\n";
+  #mitVerkkoTrio($hifi);
+  emitVerkkoHiC($hifi, $nano, $hic1, $hic2);
+
+  print STDOUT "sbatch $root/assemblies/$samp-hic.sh > $root/assemblies/$samp-hic.jid\n";
+  system("sbatch $root/assemblies/$samp-hic.sh > $root/assemblies/$samp-hic.jid 2>&1")   if ($subm);
+}
+
+
+
+
+sub emitVerkkoTrio ($$$$$) {
+  my $hifi = shift @_;
+  my $nano = shift @_;
+  my $hic1 = shift @_;
+  my $hic2 = shift @_;
+
+  print CMD "\n";
+  print CMD "\n";
+  print CMD "#\n";
+  print CMD "#  Run initial trio assembly, save results somewhere else,\n";
+  print CMD "#  and setup for a Hi-C run.\n";
+  print CMD "#\n";
+  print CMD "\n";
+  print CMD "if [ ! -e trio-outputs ] ; then\n";
+  print CMD "  $root/software/verkko/bin/verkko --slurm -d . \\\n";
+  print CMD "    --ovb-run 8 32 32 \\\n";
+  print CMD "    --screen human \\\n";
+  print CMD "    --hifi $hifi \\\n";
+  print CMD "    --nano $nano \\\n";
+  print CMD "    --hap-kmers ./mati.inherited.meryl \\\n";
+  print CMD "                ./pati.inherited.meryl trio\n";
+  print CMD "\n";
+  print CMD "  mkdir trio-outputs\n";
+  print CMD "\n";
+  print CMD "  mv 6-layoutContigs trio-outputs/\n";
+  print CMD "  mv 6-rukki         trio-outputs/\n";
+  print CMD "  mv 7-consensus     trio-outputs/\n";
+  print CMD "  mv assembly*       trio-outputs/\n";
+  print CMD "  mv batch-scripts   trio-outputs/\n";
+  print CMD "  mv snakemake.sh    trio-outputs/\n";
+  print CMD "  mv verkko.yml      trio-outputs/\n";
+  print CMD "fi\n";
+}
+
+
+sub emitVerkkoHiC ($$$$$) {
+  my $hifi = shift @_;
+  my $nano = shift @_;
+  my $hic1 = shift @_;
+  my $hic2 = shift @_;
+
+  print CMD "\n";
+  print CMD "\n";
+  print CMD "#\n";
+  print CMD "#  Run Hi-C\n";
+  print CMD "#\n";
+  print CMD "\n";
+  print CMD "if [ ! -e trio-outputs/assembly.fasta ] ; then\n";
+  print CMD "  echo \"Didn't find trio-assembly.\"\n";
+  print CMD "  exit 1\n";
+  print CMD "fi\n";
+  print CMD "\n";
+  print CMD "if [ ! -e 7-consensus ] ; then\n";
+  print CMD "  mkdir 7-consensus\n";
+  print CMD "  ln -s ../trio-outputs/7-consensus/ont_subset.fasta.gz  7-consensus/ont_subset.fasta.gz\n";
+  print CMD "  ln -s ../trio-outputs/7-consensus/ont_subset.id        7-consensus/ont_subset.id\n";
+  print CMD "fi\n";
+  print CMD "\n";
+  print CMD "if [ ! -e 8-hicPipeline ] ; then\n";
+  print CMD "  mkdir 8-hicPipeline\n";
+  print CMD "  ln -s ../trio-outputs/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.noseq.gfa  8-hicPipeline/unitigs.hpc.noseq.gfa\n";
+  print CMD "  ln -s ../trio-outputs/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.fasta      8-hicPipeline/unitigs.hpc.fasta\n";
+  print CMD "fi\n";
+  print CMD "\n";
+  print CMD "if [ ! -e assembly.fasta ] ; then\n";
+  print CMD "  $root/software/verkko/bin/verkko --slurm -d . --snakeopts '-U hicPhasing' \\\n";
+  print CMD "    --ovb-run 8 32 32 \\\n";
+  print CMD "    --screen human \\\n";
+  print CMD "    --rdna-scaff \\\n";
+  print CMD "    --hifi $hifi \\\n";
+  print CMD "    --nano $nano \\\n";
+  print CMD "    --hic1 $hic1 \\\n";
+  print CMD "    --hic2 $hic2\n";
+  print CMD "\n";
+  print CMD "  mv 8-hicPipeline/hicverkko.colors.tsv                                                                  8-hicPipeline/hicverkko.hiccolors.tsv\n";
+  print CMD "  cp trio-outputs/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.colors.csv  8-hicPipeline/hicverkko.colors.tsv\n";
+  print CMD "\n";
+  print CMD "  cat trio-outputs/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.paths.gaf | sed s/MAT/HAPLOTYPE1/g | sed s/PAT/HAPLOTYPE2/g > 8-hicPipeline/rukki.paths.gaf\n";
+  print CMD "  cat trio-outputs/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.paths.tsv | sed s/MAT/HAPLOTYPE1/g | sed s/PAT/HAPLOTYPE2/g > 8-hicPipeline/rukki.paths.tsv\n";
+  print CMD "\n";
+  print CMD "  cp -p trio-outputs/6-rukki/label* 8-hicPipeline/\n";
+  print CMD "\n";
+  print CMD "  $root/software/verkko/bin/verkko --slurm -d . \\\n";
+  print CMD "    --ovb-run 8 32 32 \\\n";
+  print CMD "    --screen human \\\n";
+  print CMD "    --rdna-scaff \\\n";
+  print CMD "    --hifi $hifi \\\n";
+  print CMD "    --nano $nano \\\n";
+  print CMD "    --hic1 $hic1 \\\n";
+  print CMD "    --hic2 $hic2\n";
+  print CMD "fi\n";
 }
 
 1;
