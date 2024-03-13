@@ -35,11 +35,13 @@ my %sampleList;
 my %readTypes;
 
 #
-#  Load the sample list.
-#
+#  Load the sample list and set some config.
+#    ($root is defined in samples.pm)
 
 #oadSamples("batch-1-test.tsv");
 loadSamples("batch-2-with-hic.tsv");
+
+$ENV{'REF_CACHE'} = "$root/samtools-ref-cache";
 
 #
 #  Parse args.
@@ -56,7 +58,9 @@ while (scalar(@ARGV) > 0) {
   }
 
   elsif ((($mode eq "fetch") ||
-          ($mode eq "list")) && ($arg eq "--type")) {
+          ($mode eq "list") ||
+          ($mode eq "read-stats") ||
+          ($mode eq "read-filter")) && ($arg eq "--type")) {
     while ((scalar(@ARGV) > 0) &&     #  While more words
            ($ARGV[0] !~ m/^-/)) {     #  and not an option word,
       $readTypes{ shift @ARGV } = 1;  #  add data-type to the list
@@ -194,6 +198,15 @@ elsif ($mode eq "fetch") {
 }
 
 elsif ($mode eq "read-stats") {
+  foreach my $s (sort keys %sampleList) {
+    summarizeReads($s, \%readTypes, \%opts);
+  }
+}
+
+elsif ($mode eq "read-filter") {
+  foreach my $s (sort keys %sampleList) {
+    filterReads($s, \%readTypes, ,\%opts);
+  }
 }
 
 elsif ($mode eq "status") {
@@ -201,7 +214,7 @@ elsif ($mode eq "status") {
 
 elsif ($mode eq "hapmers") {
   foreach my $s (sort keys %sampleList) {
-    computeHapmers($s, ,\%opts);
+    computeHapmers($s, \%opts);
   }
 }
 

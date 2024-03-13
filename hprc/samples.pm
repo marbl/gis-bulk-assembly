@@ -13,12 +13,13 @@ package hprc::samples;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(loadSamples %samples);
+@EXPORT = qw(loadSamples $root %samples);
 
 use strict;
 use warnings "all";
 no  warnings "uninitialized";
 
+our $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc" : "/work/hprc";
 our %samples;
 
 #

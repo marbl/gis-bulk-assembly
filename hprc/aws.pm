@@ -112,6 +112,7 @@ sub fetchData ($$$) {
     printf "Fetch  %7s/%-9s %s\n", $samp, "$type:", $locf;
 
     #y $c = "aws --no-sign-request s3api get-object --bucket human-pangenomics --key '$awso' --range bytes=0-1048576 '$locf' > $locf.err 2>&1";
+    #y $c = "seqrequester generate -min 1000 -max 10000 -sequences 100 -gaussian | gzip -1c > '$locf'";
     my $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
     my $r = system($c);
 

@@ -21,8 +21,6 @@ no  warnings "uninitialized";
 
 use hprc::samples;
 
-my $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc" : ".";
-
 
 #  Returns the Slurm JobID of the last known running verkko command,
 #  or undef if no known last job.

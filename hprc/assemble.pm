@@ -21,8 +21,6 @@ no  warnings "uninitialized";
 
 use hprc::samples;
 
-my $root = "/data/walenzbp/hprc";
-
 
 sub getFiles ($$) {
   my $samp  = shift @_;
@@ -78,7 +76,7 @@ sub getFiles ($$) {
   my $flist = join " \\\n         ", @flist;
 
   if (scalar(@failed) > 0) {
-    print STDERR "Can't launch the assembly, confused by Hi-C inpute:\n";
+    print STDERR "Can't launch the assembly, confused by Hi-C names:\n";
 
     foreach my $m (@failed) {
       my ($t, $f) = split '\0', $m;
@@ -101,7 +99,7 @@ sub getFiles ($$) {
     exit(1);
   }
 
-  return($flist);
+  return wantarray() ? @flist : $flist;
 }
 
 

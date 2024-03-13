@@ -22,8 +22,6 @@ no  warnings "uninitialized";
 use hprc::samples;
 use hprc::assemble;
 
-my $root = "/data/walenzbp/hprc";
-
 
 sub computeHapmers ($$) {
   my $samp   = shift @_;
