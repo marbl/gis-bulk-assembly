@@ -19,44 +19,51 @@ use strict;
 use warnings "all";
 no  warnings "uninitialized";
 
+use File::Basename;
+
 use hprc::samples;
 use hprc::assemble;
 
 
 sub filterHiFi ($$$$) {
-  my $file   = shift @_;
-  my $base   = shift @_;
-  my $name   = shift @_;
-  my $submit = shift @_;
+  my $file   = shift @_;   #  Full path to input
+  my $baseIN = shift @_;   #  Full path without extensions
+  my $name   = shift @_;   #  Just the name of the reads, no prefix, no path, no extensions
+  my $submit = shift @_;   #    (the above is only for logging)
 
-  if (-e "$base.cutadapt.jid") {
+  my $bdir = dirname($baseIN) . "/hifi-cutadapt";   #  Throw output into hifi-cutadapt directory,
+  my $bnam = basename($baseIN);                     #  using the original filename.
+
+  system("mkdir -p $bdir");
+
+  if (-e "$bdir/$bnam.jid") {
     print STDERR " - $name - RUNNING.\n";
     return;
   }
-  if (-e "$base.cutadapt.err") {
+  if (-e "$bdir/$bnam.err") {
     print STDERR " - $name - CRASHED.\n";
     return;
   }
-  if (-e "$base.cutadapt.fasta.gz") {
+  if (-e "$bdir/$bnam.fasta.gz") {
     print STDERR " - $name - FINISHED.\n";
     return;
   }
 
-  if (! -e "$base.cutadapt.sh") {
-    open(CMD, "> $base.cutadapt.sh") or die "Failed to open '$base.cutadapt.sh' for writing: $!";
+  if (! -e "$bdir/$bnam.sh") {
+    open(CMD, "> $bdir/$bnam.sh") or die "Failed to open '$bdir/$bnam.sh' for writing: $!";
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
-    print CMD "#SBATCH --cpus-per-task=2\n";
-    print CMD "#SBATCH --mem=16g\n";
-    print CMD "#SBATCH --time=4-0\n";
-    print CMD "#SBATCH --output=$base.cutadapt.err\n";
+    print CMD "#SBATCH --cpus-per-task=24\n";
+    print CMD "#SBATCH --mem=32g\n";
+    print CMD "#SBATCH --time=4:00:00\n";
+    print CMD "#SBATCH --output=$bdir/$bnam.err\n";
     print CMD "#SBATCH --job-name=cutada$name\n";
     print CMD "#\n";
     print CMD "\n";
     print CMD "set -o pipefail\n";
     print CMD "set -x\n";
     print CMD "\n";
-    print CMD "cd $root\n";
+    print CMD "cd $bdir\n";
     print CMD "\n";
     print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
     print CMD "\n";
@@ -65,6 +72,15 @@ sub filterHiFi ($$$$) {
     print CMD "\n";
     print CMD "cutCPUs=2\n";
     print CMD "zipCPUs=\$(expr \$SLURM_JOB_CPUS_PER_NODE - 2)\n";
+    print CMD "zipOpt='-9 -b 131072'\n";
+    print CMD "\n";
+    print CMD "if [ x\$zipCPUs = x ] ; then\n";
+    print CMD "  echo 'WARNING: SLURM_JOB_CPUS_PER_NODE not set, using minimal CPUs instead.'\n";
+    print CMD "  cutCPUs=1\n";
+    print CMD "  zipCPUs=1\n";
+    print CMD "  zipOpt='-1'\n";
+    print CMD "fi\n";
+    print CMD "\n";
     print CMD "\n";
     print CMD "$root/software/seqrequester/build/bin/seqrequester extract -fasta \\\n";
     print CMD "  '$file' \\\n";
@@ -72,25 +88,30 @@ sub filterHiFi ($$$$) {
     print CMD "cutadapt --fasta --discard --revcomp -j \$cutCPUs -e 0.05 \\\n";
     print CMD " -b 'AAAAAAAAAAAAAAAAAATTAACGGAGGAGGAGGA;min_overlap=35' \\\n";
     print CMD " -b 'ATCTCTCTCTTTTCCTCCTCCTCCGTTGTTGTTGTTGAGAGAGAT;min_overlap=45' \\\n";
-    print CMD " --json '$base.cutadapt.log.json' \\\n";
+    print CMD " --json '$bnam.log.json' \\\n";
     print CMD " - \\\n";
     print CMD "| \\\n";
-    print CMD "pigz -9 -b 131072 -p \$zipCPUs \\\n";
-    print CMD " > '$base.cutadapt.fasta.gz' \\\n";
+    print CMD "pigz \$zipOpt -p \$zipCPUs \\\n";
+    print CMD " > '$bnam.fasta.gz' \\\n";
     print CMD "\n";
     print CMD "if [ $? != 0 ] ; then\n";
     print CMD "  echo 'Failed!'\n";
-    print CMD "  rm $base.cutadapt.fasta.gz\n";
+    print CMD "  rm $bnam.fasta.gz\n";
     print CMD "else\n";
-    print CMD "  rm $base.cutadapt.err\n";
+    print CMD "  rm $bnam.err\n";
     print CMD "fi\n";
     print CMD "\n";
-    print CMD "rm $base.cutadapt.jid\n";
+    print CMD "rm $bnam.jid\n";
     close(CMD);
   }
 
-  print STDERR " - $name - SUBMITTING.\n";
-  system("sbatch $base.cutadapt.sh > $base.cutadapt.jid")   if ($submit);
+  if ($submit) {
+    print STDERR " - $name - SUBMITTING.\n";
+    system("sbatch $bdir/$bnam.sh > $bdir/$bnam.jid")   if ($submit);
+  }
+  else {
+    print STDERR " - $name - NOT STARTED.\n";
+  }
 }
 
 
@@ -111,8 +132,6 @@ sub filterReads ($$$) {
       $base =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;
       $name =  $base;
       $name =~ s/^.*--//;
-
-      $file =~ s/.bam/.fasta.xz/;
 
       if ($type eq 'hifi')     { filterHiFi($file, $base, $name, $submit); }
       if ($type eq 'ont')      {}

@@ -19,6 +19,9 @@ use strict;
 use warnings "all";
 no  warnings "uninitialized";
 
+use Time::Local;
+use Date::Parse;
+
 use hprc::samples;
 
 
@@ -123,11 +126,75 @@ sub checkStatus ($$) {
 
   return      if (scalar(@logs) == 0);
 
-  #  Scan logs.
+  #  Get slurm info.
+  #    - scan logs to find the earliest/latest job dates.
+  #    - request all jobs from sdlurm for those dates.
+  #
+  my $bgnTime = 1999999999;   my $bgnDate = "Tue May 17 23:33:20 2033";
+  my $endTime = 1000000000;   my $endDate = "Sat Sep  8 21:46:40 2001";
+
+  foreach my $log (@logs) {
+    #print STDERR "Scan $log for dates.\n";
+
+    open(LOG, "< $log") or die "Failed to open log '$log' for reading: $!\n";
+    while (<LOG>) {
+      chomp;
+
+      if (m/202\d\]$/) {  #  This is to catch errors parsing dates.
+        if (m/^\s*\[(Sun|Mon|Tue|Wed|Th[ur]|Fri|Sat)\s(...\s+\d+\s\d\d:\d\d:\d\d\s\d\d\d\d)\]$/) {
+          my  $tt = str2time($2);
+          my ($ss, $mm, $hh, $da, $mo, $yr, $zn, $cn) = strptime($2);
+
+          if ($tt < $bgnTime)  { $bgnTime = $tt;  $bgnDate = sprintf "%4d-%02d-%02dT%02d:%02d:%02d", $yr+1900, $mo+1, $da,  0,  0,  0;  }
+          if ($endTime < $tt)  { $endTime = $tt;  $endDate = sprintf "%4d-%02d-%02dT%02d:%02d:%02d", $yr+1900, $mo+1, $da, 23, 59, 59;  }
+        }
+        else {
+          die "Failed to parse date: '$_'\n";
+        }
+      }
+    }
+    close(LOG);
+  }
+
+  #print "$bgnTime - $bgnDate\n";
+  #print "$endTime - $endDate\n";
+
+  my %jobToStart;
+  my %jobToEnd;
+  my %jobToQTime;
+  my %jobToElapsed;
+  my %jobToMaxMem;
+  my %jobToAvgCPU;
+
+  open(SLM, "dashboard_cli jobs --noheader --null 0 --archive --since $bgnDate --until $endDate --raw --fields jobid,start_time,end_time,queued_time,elapsed_time,mem_max,cpu_avg |");
+  while (<SLM>) {
+    chomp; 
+    if (m/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.?\d*)$/) {
+      print "$1 -> start='$2' end='$3' queue='$4' elapsed='$5' maxmem='$6' avgcpu='$7'\n";
+      $jobToStart{$1}   = $2;
+      $jobToEnd{$1}     = $3;
+      $jobToQTime{$1}   = $4;
+      $jobToElapsed{$1} = $5;
+      $jobToMaxMem{$1}  = $6;
+      $jobToAvgCPU{$1}  = $7;
+    } else {
+      print STDERR "WARNING: failed to parse dashboard_cli line '$_'\n";
+    }
+  }
+  close(SLM);
+
+  #  Scan logs, for real this time.
 
   print "                                           ------------ SUBMIT ------------  ----------- RESUBMIT -----------  ---------- COMPLETION ----------\n";
   print "snakeID    rule name                       slurmID                     date  slurmID                     date  slurmID                     date\n";
   print "---------  ------------------------------  --------------------------------  --------------------------------  --------------------------------\n";
+
+  my %stageCPU;
+  my %stageWmin;
+  my %stageWmax;
+  my %stageWall;
+  my %stageQueue;
+  my %stageMaxMem;
 
   foreach my $log (@logs) {
     my $version;
@@ -146,9 +213,9 @@ sub checkStatus ($$) {
     my %resubmit;
     my %completed;
 
-    print "\n";
-    print "Scan $log\n";
-    print "\n";
+    #print "\n";
+    #print "Scan $log\n";
+    #print "\n";
 
     open(LOG, "< $log") or die "Failed to open log '$log' for reading: $!\n";
     while (<LOG>) {
@@ -199,6 +266,32 @@ sub checkStatus ($$) {
         my $s = $submitted{$tid};
         my $r = $resubmit {$tid};
         my $c = $completed{$tid};
+
+        if ($jid1 ne "local") {
+          my $r = $tid2rule{$tid};
+
+          #print "$r job $jid1 elap $jobToElapsed{$jid1} cpu $jobToAvgCPU{$jid1}\n";
+          #print "$r $stageCPU{$r}\n";
+          $stageCPU   {$r} += ($jobToElapsed{$jid1} * $jobToAvgCPU{$jid1});
+          #print "$r $stageCPU{$r}\n";
+          $stageWmin  {$r}  = $jobToStart{$jid1}     if (!exists($stageWmin{$r})) || ($stageWmin{$r} > $jobToStart{$jid1});
+          $stageWmax  {$r}  = $jobToEnd{$jid1}       if (!exists($stageWmax{$r})) || ($stageWmax{$r} < $jobToEnd{$jid1});
+          $stageWall  {$r} += $jobToElapsed{$jid1};
+          $stageQueue {$r} += $jobToQTime{$jid1};
+          $stageMaxMem{$r}  = $jobToMaxMem{$jid1}    if ($stageMaxMem{$r} < $jobToMaxMem{$jid1});
+        }
+
+        if ($jid1 ne $jid2) {
+          my $r = $tid2rule{$tid};
+
+          $stageCPU   {$r} += ($jobToElapsed{$jid2} * $jobToAvgCPU{$jid2});
+          $stageWmin  {$r}  = $jobToStart{$jid2}     if (!exists($stageWmin{$r})) || ($stageWmin{$r} > $jobToStart{$jid2});
+          $stageWmax  {$r}  = $jobToEnd{$jid2}       if (!exists($stageWmax{$r})) || ($stageWmax{$r} < $jobToEnd{$jid2});
+          $stageWall  {$r} += $jobToElapsed{$jid2};
+          $stageQueue {$r} += $jobToQTime{$jid2};
+          $stageMaxMem{$r}  = $jobToMaxMem{$jid2}    if ($stageMaxMem{$r} < $jobToMaxMem{$jid2});
+        }
+
 
         if (defined($r)) {
           printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
@@ -298,6 +391,21 @@ sub checkStatus ($$) {
             "", "";
       }
     }
+  }
+
+  print "\n";
+  print "\n";
+  print "                                     Actual   Sequential   Sequential   Est. Total  Max Memory\n";
+  print "rule name                          Wall (h)     Wall (h)    Queue (h)      CPU (h)        (GB)\n";
+  print "------------------------------ --incorrect- ------------ ------------ ------------ -----------\n";
+
+  foreach my $r (keys %stageCPU) {
+    printf "%-30s %12.2f %12.2f %12.2f %12.2f %11.3f\n", $r, 
+        $stageWmax  {$r} / 3600.0 - $stageWmin{$r} / 3600.0,
+        $stageWall  {$r} / 3600.0,
+        $stageQueue {$r} / 3600.0,
+        $stageCPU   {$r} / 3600.0,
+        $stageMaxMem{$r} / 1024.0;
   }
 }
 

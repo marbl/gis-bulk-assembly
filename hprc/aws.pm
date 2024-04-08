@@ -27,7 +27,7 @@ sub awsToLocalPath ($$) {
   my $locf = shift @_;
 
   $locf =~ s!/!--!g;
-  $locf =~ s!^s3:----human-pangenomics--submissions--!aws-data/$samp/!;
+  $locf =~ s!^s3:----human-pangenomics--\w+--!aws-data/$samp/!;
 
   return($locf);
 }
@@ -37,7 +37,7 @@ sub awsToLocalInfo ($$) {
   my $info = shift @_;
 
   $info =~ s!/!--!g;
-  $info =~ s!^s3:----human-pangenomics--submissions--!aws-info/$samp/!;
+  $info =~ s!^s3:----human-pangenomics--\w+--!aws-info/$samp/!;
   $info .= ".s3ls";
 
   return($info);
@@ -117,6 +117,7 @@ sub fetchData ($$$) {
     my $r = system($c);
 
     if ($r == 0) {
+      unlink "$locf.err";
       next;
     }
 
@@ -134,6 +135,8 @@ sub fetchData ($$$) {
     close(FAIL);
 
     print "\n";
+
+    exit(1);
   }
 }
 

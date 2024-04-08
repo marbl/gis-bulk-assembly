@@ -23,8 +23,11 @@ use hprc::list;
 use hprc::readStats;
 use hprc::readFilter;
 use hprc::status;
+use hprc::genomescope;
 use hprc::hapmers;
+use hprc::yakmers;
 use hprc::assemble;
+use hprc::analyze;
 
 
 my @errs;
@@ -40,6 +43,8 @@ my %readTypes;
 
 #oadSamples("batch-1-test.tsv");
 loadSamples("batch-2-with-hic.tsv");
+loadSamples("batch-3-with-hic.tsv");
+#oadSamples("washu-pedigree.tsv");
 
 $ENV{'REF_CACHE'} = "$root/samtools-ref-cache";
 
@@ -50,7 +55,7 @@ $ENV{'REF_CACHE'} = "$root/samtools-ref-cache";
 while (scalar(@ARGV) > 0) {
   my $arg = $ARGV[0];  shift @ARGV;
 
-  if ($arg eq "--sample")  {
+  if ($arg =~ m/^--samples?$/)  {
     while ((scalar(@ARGV) > 0) &&      #  While more words
            ($ARGV[0] !~ m/^-/)) {      #  and not an option word,
       $sampleList{ shift @ARGV } = 1;  #  add sample to the list
@@ -76,8 +81,20 @@ while (scalar(@ARGV) > 0) {
   elsif (($mode eq "assemble") && ($arg eq "--trio"))       { $opts{"verkko-trio"} = 1; }   #
   elsif (($mode eq "assemble") && ($arg eq "--hi-c"))       { $opts{"verkko-hi-c"} = 1; }   #
 
-  elsif ((($mode eq "hapmers") || ($mode eq "assemble")) && ($arg eq "--submit")) {
+  #elsif  ($mode eq "analyze")  {
+  #}
+
+  elsif ((($mode eq "genomescope") ||
+          ($mode eq "hapmers") ||
+          ($mode eq "yakmers") ||
+          ($mode eq "read-filter") ||
+          ($mode eq "assemble")) && ($arg eq "--submit")) {
     $opts{"submit"} = 1;
+  }
+
+  elsif ((($mode eq "read-filter") ||
+          ($mode eq "assemble")) && ($arg eq "--cleanup")) {
+    $opts{"cleanup"} = 1;
   }
 
   else {
@@ -126,12 +143,20 @@ if ((scalar(keys %sampleList) == 0) ||   #  If no samples supplied, or
 if (scalar(keys %readTypes) == 0) {
   $readTypes{'all'} = 1;
 }
+if (exists($readTypes{'mati'})) {
+  $readTypes{'mat-ilmn'} = 1;   delete $readTypes{'mati'};
+}
+if (exists($readTypes{'pati'})) {
+  $readTypes{'pat-ilmn'} = 1;   delete $readTypes{'pati'};
+}
 if (exists($readTypes{'all'})) {
   $readTypes{$_} = 1   foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
   delete $readTypes{'all'};
 }
 foreach my $f (keys %readTypes) {   #  Check for invalid fetch options.
-  if (($f ne 'hifi') && ($f ne 'ont') && ($f ne 'hic') && ($f ne 'ilmn') &&
+  if (($f ne 'hifi') && ($f ne 'hifi-cutadapt') && ($f ne 'ont') &&
+      ($f ne 'hic') && ($f ne 'hic1') && ($f ne 'hic2') &&
+      ($f ne 'ilmn') && 
       ($f ne 'mat-ilmn') && ($f ne 'pat-ilmn')) {
     delete $readTypes{$_}  foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
     push @errs, "Invalid '$mode' types '" . join("', '", sort keys %readTypes) . "'.";
@@ -153,10 +178,16 @@ if (($mode ne "help") &&
     ($mode ne "fetch") &&
     ($mode ne "read-stats") &&
     ($mode ne "read-filter") &&
+    ($mode ne "genomescope") &&
     ($mode ne "hapmers") &&
+    ($mode ne "yakmers") &&
     ($mode ne "assemble") &&
-    ($mode ne "postprocess")) {
+    ($mode ne "analyze")) {
   push @errs, "Invalid mode '$mode'.\n";
+}
+
+if (($opts{'submit'}) && ($ENV{'HOSTNAME'} =~ m/helix/)) {
+  push @errs, "Can't --submit on host helix.\n";
 }
 
 if (($mode eq "help") || (scalar(@errs) > 0)) {
@@ -165,9 +196,12 @@ if (($mode eq "help") || (scalar(@errs) > 0)) {
   print "    list [--type all|hifi|etc] [--files]\n";
   print "    status\n";
   print "    fetch [--type all|hifi|etc]\n";
-  print "    stats\n";    #  --reads or --assembly
-  print "    hapmers\n";
+  print "    read-stats\n";    #  --reads or --assembly
+  print "    genomescope [--submit]\n";
+  print "    hapmers [--submit]\n";
+  print "    yakmers [--submit]\n";
   print "    assemble [--trio, --hi-c --canu-trio --canu-hifi] [--submit]\n";
+  print "    analyze\n";
   print "\n";
   print "  OPTIONS:\n";
   print "  --sample [sample ...]   - restrict operation to the specified samples\n";
@@ -212,15 +246,48 @@ elsif ($mode eq "read-filter") {
 elsif ($mode eq "status") {
 }
 
+elsif ($mode eq "genomescope") {
+  foreach my $s (sort keys %sampleList) {
+    computeGenomescope($s, \%opts);
+  }
+}
+
 elsif ($mode eq "hapmers") {
   foreach my $s (sort keys %sampleList) {
     computeHapmers($s, \%opts);
   }
 }
 
+elsif ($mode eq "yakmers") {
+  foreach my $s (sort keys %sampleList) {
+    computeYakmers($s, \%opts);
+  }
+}
+
 elsif ($mode eq "assemble") {
   foreach my $s (sort keys %sampleList) {
     startAssembly($s, \%opts);
+  }
+}
+
+elsif ($mode eq "analyze") {
+  foreach my $db (qw(primates)) {   #  Also included euarchontoglires for some reason
+    if (! -e "$root/busco-odb10-cache") {
+      system("mkdir -p $root/busco-odb10-cache");
+    }
+    if (! -e "$root/busco-odb10-cache/${db}_odb10.2024-01-08.tar.gz") {
+      print STDERR "Fetching BUSCO ${db}.\n";
+      system("cd $root/busco-odb10-cache ; curl -LRO https://busco-data.ezlab.org/v5/data/lineages/${db}_odb10.2024-01-08.tar.gz 2> ${db}.fetch.err");
+    }
+    if (! -e "$root/busco-odb10-cache/${db}_odb10/dataset.cfg") {
+      print STDERR "Unpacking BUSCO ${db} (this is slow).\n";
+      system("cd $root/busco-odb10-cache ; tar -xzf ${db}_odb10.2024-01-08.tar.gz");
+    }
+  }
+
+  foreach my $s (sort keys %sampleList) {
+    startChromosomeAssignment($s, \%opts);
+    startTelomereAnalysis($s, \%opts);
   }
 }
 

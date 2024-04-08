@@ -25,9 +25,13 @@ our %samples;
 #
 #  Extract the values from within brackets: "[ A,B,C,D ]"
 #  Returns reference to an array.
+#  If given a non-bracketed string, returns the original string.
 #
 sub extractItems ($) {
   my $orig = shift @_;
+
+  return undef   if ($orig eq "na");
+  return $orig   if ($orig !~ m/^\s*\[/);
 
   $orig =~ s/^\s*\[\s*//;
   $orig =~ s/\s*\]\s*$//;
@@ -40,7 +44,7 @@ sub extractItems ($) {
     push @$items, $item;
   }
 
-  return($items);
+  return $items;
 }
 
 #
@@ -54,10 +58,12 @@ sub loadSamples ($) {
   open(F, "< $tsv") or die "Failed to open '$tsv': $!\n";
 
   #  Read the header line and massage into more convenient labels.
-  {
+  while (!eof(F)) {
     $_ = <F>;
     s/^\s+//;
     s/\s+$//;
+
+    next if (($_ eq "") || ($_ =~ m/^#/));
 
     foreach my $h (split '\t', $_) {
       my $o = $h;
@@ -84,32 +90,33 @@ sub loadSamples ($) {
 
       push @cols, $h;
     }
+
+    last;
   }
 
-  while (<F>) {
+  while (!eof(F)) {
+    $_ = <F>;
+    s/^\s+//;
+    s/\s+$//;
+
+    next if (($_ eq "") || ($_ =~ m/^#/));
+
     my @vals = split '\t', $_;
     my $s = {};
 
     my $col = 0;
     my $id;
 
-    $$s{$cols[$col++]} = $id        = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]}              = shift @vals;
-    $$s{$cols[$col++]} = extractItems(shift @vals);
-    $$s{$cols[$col++]} = extractItems(shift @vals);
-    $$s{$cols[$col++]} = extractItems(shift @vals);
-    $$s{$cols[$col++]} = extractItems(shift @vals);
-    $$s{$cols[$col++]} = extractItems(shift @vals);
-    $$s{$cols[$col++]} = extractItems(shift @vals);
+    if (scalar(@vals) != scalar(@cols)) {
+      print "ERROR: Expecting cols=", scalar(@cols), " values, but got ", scalar(@vals), ".\n";
+      print "ERROR: $_\n";
+    }
+
+    while (scalar(@vals) > 0) {
+      $$s{$cols[$col++]} = extractItems(shift @vals);
+    }
+
+    $id = $$s{'sample_id'};
 
     die if (scalar(@vals) > 0);
 
