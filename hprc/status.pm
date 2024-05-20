@@ -13,7 +13,7 @@ package hprc::status;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(checkStatus);
+@EXPORT = qw(checkStatus reportSlurmTime);
 
 use strict;
 use warnings "all";
@@ -23,101 +23,124 @@ use Time::Local;
 use Date::Parse;
 
 use hprc::samples;
+use hprc::assemble;
 
 
 #  Returns the Slurm JobID of the last known running verkko command,
 #  or undef if no known last job.
 #
-sub findJobID ($) {
-  my $samp = shift @_;
-  my $jid  = undef;
-
-  print "Query $root/assemblies/$samp.jid.\n";
-  if (-e "$root/assemblies/$samp.jid") {
-    open(JID, "< $root/assemblies/$samp.jid") or die "Failed to open '$root/assemblies/$samp.jid' for reading: $!\n";
-    $jid = int(<JID>);
-    close(JID);
-  }
-
-  die "No job id.\n" if (!defined($jid));
-  return($jid);
-}
+#sub findJobID ($$) {
+#  my $samp = shift @_;
+#  my $flav = shift @_;
+#  my $dirn = "$rasm/$samp";
+#  my $jid  = undef;
+#
+#  print "Query $dirn/$flav.jid.\n";
+#  if (-e "$dirn/$flav.jid") {
+#    open(JID, "< $dirn/$flav.jid") or die "Failed to open '$dirn/$flav.jid' for reading: $!\n";
+#    $jid = int(<JID>);
+#    close(JID);
+#  }
+#
+#  die "No job id.\n" if (!defined($jid));
+#  return($jid);
+#}
 
 
 #  Returns 'status' of the last known verkko command.
 #  This came from verkko/src/profiles/slurm-sge-status.sh.
 #
-sub findJobStatus ($$) {
-  my $samp = shift @_;
-  my $jid  = shift @_;
-
-  my $state = "UNKNWON";
-
-  if (-x "/usr/local/bin/dashboard_cli") {
-    my ($jobid, $state, $reason, $out);
-
-    open(JOBS, "dashboard_cli jobs --noheader --tab --fields jobid,state,state_reason,std_out --jobid $jid|") or die "Failed to open 'dashboard_cli jobs' for reading: $!\n";
-    while (<JOBS>) {
-      ($jobid, $state, $reason, $out) = split '\s+', $_;
-
-      last if ($jobid eq $jid);
-    }
-    close(JOBS);
-
-    if (!defined($jobid)) {
-      print STDERR "Didn't get a report for job $jid from Slurm.  Can't check if I can safely submit.\n";
-      exit(0);
-    }
-
-    if    (($state eq "COMPLETED")) {
-      $state = "COMPLETED";
-    }
-    elsif (($state eq "PENDING") ||
-           ($state eq "CONFIGURING") ||
-           ($state eq "RUNNING") ||
-           ($state eq "SUSPENDED") ||
-           ($state eq "PREEMPTED") ||
-           ($state eq "COMPLETING")) {
-      $state = "RUNNING";
-    }
-    elsif (($state eq "BOOT_FAIL") ||
-           ($state eq "CANCELLED") ||
-           ($state eq "DEADLINE") ||
-           ($state eq "FAILED") ||
-           ($state eq "NODE_FAIL") ||
-           ($state eq "OUT_OF_MEMORY") ||
-           ($state eq "PREEMPTED") ||
-           ($state eq "TIMEOUT")) {
-      $state = "FAILED";
-    }
-    else {
-      $state = "UNKNOWN";
-    }
-  }
-
-  return($state);
-}
+#sub findJobStatus ($$$) {
+#  my $samp = shift @_;
+#  my $flav = shift @_;
+#  my $dirn = "$rasm/$samp";
+#  my $jid  = shift @_;
+#
+#  my $state = "UNKNWON";
+#
+#  if (-x "/usr/local/bin/dashboard_cli") {
+#    my ($jobid, $state, $reason, $out);
+#
+#    open(JOBS, "dashboard_cli jobs --noheader --tab --fields jobid,state,state_reason,std_out --jobid $jid|") or die "Failed to open 'dashboard_cli jobs' for reading: $!\n";
+#    while (<JOBS>) {
+#      ($jobid, $state, $reason, $out) = split '\s+', $_;
+#
+#      last if ($jobid eq $jid);
+#    }
+#    close(JOBS);
+#
+#    if (!defined($jobid)) {
+#      print STDERR "Didn't get a report for job $jid from Slurm.  Can't check if I can safely submit.\n";
+#      exit(0);
+#    }
+#
+#    if    (($state eq "COMPLETED")) {
+#      $state = "COMPLETED";
+#    }
+#    elsif (($state eq "PENDING") ||
+#           ($state eq "CONFIGURING") ||
+#           ($state eq "RUNNING") ||
+#           ($state eq "SUSPENDED") ||
+#           ($state eq "PREEMPTED") ||
+#           ($state eq "COMPLETING")) {
+#      $state = "RUNNING";
+#    }
+#    elsif (($state eq "BOOT_FAIL") ||
+#           ($state eq "CANCELLED") ||
+#           ($state eq "DEADLINE") ||
+#           ($state eq "FAILED") ||
+#           ($state eq "NODE_FAIL") ||
+#           ($state eq "OUT_OF_MEMORY") ||
+#           ($state eq "PREEMPTED") ||
+#           ($state eq "TIMEOUT")) {
+#      $state = "FAILED";
+#    }
+#    else {
+#      $state = "UNKNOWN";
+#    }
+#  }
+#
+#  return($state);
+#}
 
 
 sub checkStatus ($$) {
   my $samp = shift @_;
   my $opts = shift @_;
+  my $flav = $$opts{"flavor"};
+  my $dirn = "$rasm/$samp";
   my @logs;
+  my $showJobs  = exists($$opts{'jobs'});    #  What stuff to show.
+  my $showTimes = exists($$opts{'times'});
 
-  #  Find jobid.
+  #  Report simple status unless 'jobs' or 'times' is explicitly requested.
 
-  #my $jid  = findJobID($samp);
-  #my $stat = findJobStatus($samp, $jid);
+  if (!$showJobs && !$showTimes) {
+    if    (isFinished($samp, $flav)) {
+      print "$samp/$flav\tFINISHED\n";
+    }
+    elsif (-e "$dirn/$flav.jid") {
+      print "$samp/$flav\tRUNNING\n";
+    }
+    elsif (-e "$dirn/$flav.sh") {
+      print "$samp/$flav\tFAILED (or not submitted)\n";
+    }
+    else {
+      print "$samp/$flav\tNOT STARTED\n";
+    }
+
+    return;
+  }      
 
   #  Find logs.
 
-  open(FIL, "ls $root/assemblies/ |");   #  Note: 'ls assemblies/*log' fails if no logs present!
+  open(FIL, "find $rasm -maxdepth 2 -type f |");
   while (<FIL>) {
     s/^\s+//;
     s/\s+$//;
 
-    if (m/^$samp\.\d+\.log$/) {
-      push @logs, "$root/assemblies/$_";
+    if (m!$samp/$flav\.\d+\.log$!) {
+      push @logs, "$_";
     }
   }
   close(FIL);
@@ -170,7 +193,7 @@ sub checkStatus ($$) {
   while (<SLM>) {
     chomp; 
     if (m/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.?\d*)$/) {
-      print "$1 -> start='$2' end='$3' queue='$4' elapsed='$5' maxmem='$6' avgcpu='$7'\n";
+      #print "$1 -> start='$2' end='$3' queue='$4' elapsed='$5' maxmem='$6' avgcpu='$7'\n";
       $jobToStart{$1}   = $2;
       $jobToEnd{$1}     = $3;
       $jobToQTime{$1}   = $4;
@@ -185,9 +208,11 @@ sub checkStatus ($$) {
 
   #  Scan logs, for real this time.
 
-  print "                                           ------------ SUBMIT ------------  ----------- RESUBMIT -----------  ---------- COMPLETION ----------\n";
-  print "snakeID    rule name                       slurmID                     date  slurmID                     date  slurmID                     date\n";
-  print "---------  ------------------------------  --------------------------------  --------------------------------  --------------------------------\n";
+  if ($showJobs == 1) {
+    printf "%-42s" .                                 "  ------------ SUBMIT ------------  ----------- RESUBMIT -----------  ---------- COMPLETION ----------\n", "$samp/$flav";
+    printf "snakeID     rule name                       slurmID                     date  slurmID                     date  slurmID                     date\n";
+    printf "----------  ------------------------------  --------------------------------  --------------------------------  --------------------------------\n";
+  }
 
   my %stageCPU;
   my %stageWmin;
@@ -292,24 +317,25 @@ sub checkStatus ($$) {
           $stageMaxMem{$r}  = $jobToMaxMem{$jid2}    if ($stageMaxMem{$r} < $jobToMaxMem{$jid2});
         }
 
-
-        if (defined($r)) {
-          printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
-              $tid,
-              $status,
-              $tid2rule{$tid},
-              $jid1, $s,
-              $jid2, $r,
-              $jid2, $c;
-        }
-        else {
-          printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
-              $tid,
-              $status,
-              $tid2rule{$tid},
-              $jid1, $s,
-              "", "",
-              $jid2, $c;
+        if ($showJobs == 1) {
+          if (defined($r)) {
+            printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+                $tid,
+                $status,
+                $tid2rule{$tid},
+                $jid1, $s,
+                $jid2, $r,
+                $jid2, $c;
+          }
+          else {
+            printf "%-5s %s  %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+                $tid,
+                $status,
+                $tid2rule{$tid},
+                $jid1, $s,
+                "", "",
+                $jid2, $c;
+          }
         }
 
         delete $tid2jid{$tid};
@@ -374,38 +400,43 @@ sub checkStatus ($$) {
       my $r = $resubmit {$tid};
       my $c = $completed{$tid};
 
-      if (defined($r)) {
-        printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
-            $tid,
-            $tid2rule{$tid},
-            $jid1, $s,
-            $jid2, $r,
-            "", "";
-      }
-      else {
-        printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
-            $tid,
-            $tid2rule{$tid},
-            $jid1, $s,
-            "", "",
-            "", "";
+      if ($showJobs == 1) {
+        if (defined($r)) {
+          printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+              $tid,
+              $tid2rule{$tid},
+              $jid1, $s,
+              $jid2, $r,
+              "", "";
+        }
+        else {
+          printf "%-5s RUN   %-30s  %-11s %-20s  %-11s %-20s  %-11s %-20s\n",
+              $tid,
+              $tid2rule{$tid},
+              $jid1, $s,
+              "", "",
+              "", "";
+        }
       }
     }
+
+    print "\n";
+    print "\n";
   }
 
-  print "\n";
-  print "\n";
-  print "                                     Actual   Sequential   Sequential   Est. Total  Max Memory\n";
-  print "rule name                          Wall (h)     Wall (h)    Queue (h)      CPU (h)        (GB)\n";
-  print "------------------------------ --incorrect- ------------ ------------ ------------ -----------\n";
+  if ($showTimes == 1) {
+    printf "%-30s" .                     "       Actual   Sequential   Sequential   Est. Total  Max Memory\n", "$samp/$flav";
+    printf "rule name                          Wall (h)     Wall (h)    Queue (h)      CPU (h)        (GB)\n";
+    printf "------------------------------ --incorrect- ------------ ------------ ------------ -----------\n";
 
-  foreach my $r (keys %stageCPU) {
-    printf "%-30s %12.2f %12.2f %12.2f %12.2f %11.3f\n", $r, 
-        $stageWmax  {$r} / 3600.0 - $stageWmin{$r} / 3600.0,
-        $stageWall  {$r} / 3600.0,
-        $stageQueue {$r} / 3600.0,
-        $stageCPU   {$r} / 3600.0,
-        $stageMaxMem{$r} / 1024.0;
+    foreach my $r (keys %stageCPU) {
+      printf "%-30s %12.2f %12.2f %12.2f %12.2f %11.3f\n", $r, 
+          $stageWmax  {$r} / 3600.0 - $stageWmin{$r} / 3600.0,
+          $stageWall  {$r} / 3600.0,
+          $stageQueue {$r} / 3600.0,
+          $stageCPU   {$r} / 3600.0,
+          $stageMaxMem{$r} / 1024.0;
+    }
   }
 }
 

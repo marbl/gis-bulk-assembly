@@ -1,9 +1,9 @@
 #!/bin/sh
 #
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32g
+#SBATCH --mem=64g
 #SBATCH --time=4-0
-#SBATCH --output=$root/assemblies/$samp.%j.log
+#SBATCH --output=./analysis.err
 #SBATCH --job-name=va$samp
 #
 set -e
@@ -17,10 +17,10 @@ refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 samp=$1
 root="/data/walenzbp/hprc"
 
-mkdir -p $root/assemblies/$samp/analysis
-cd       $root/assemblies/$samp/analysis
+#mkdir -p $root/assemblies-v2/$samp/$flav/analysis
+#cd       $root/assemblies-v2/$samp/$flav/analysis
 
-export REF_CACHE=$root/samtools-ref-cache
+export REF_CACHE=$root/hprc-cache/samtools
 
 module load samtools
 module load mashmap
@@ -122,21 +122,10 @@ fi
 
 if [ ! -e assembly-ref.comp.mashmap ]; then
     ctgname="unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip"
+	  contigs="../../verkko/5-untip/$ctgname.fasta"
 
-    if   [ -e ../6-rukki/$ctgname.fasta ] ; then
-        contigs="../6-rukki/$ctgname.fasta"
-
-    elif [ -e ../5-untip/$ctgname.gfa ] ; then
-	      awk '{if (match($1, "^S")) { print ">"$2; print $3}}' \
-            < ../5-untip/$ctgname.gfa \
-        | fold -c \
-            > ../5-untip/$ctgname.fasta
-
-	      contigs="../5-untip/$ctgname.fasta"
-
-    else
-        echo "No contigs found."
-        exit 1
+    #  Fallback; $contigs should already exist.
+    if [ ! -e $contigs ] ; then
     fi
 
     mashmap -r $refc -q $contigs --pi 95 -s 10000 -t 8 -o assembly-ref.comp.mashmap
@@ -255,8 +244,8 @@ rm -f tmp tmp? tmp.gfa
 #
 
 for asm in assembly.haplotype1 assembly.haplotype2 ; do
-    for odb in `cd $root/busco-odb10-cache ; ls -d *odb10` ; do
-        faa="$root/busco-odb10-cache/$odb/refseq_db.faa.gz"
+    for odb in `cd $root/hprc-cache/busco ; ls -d *odb10` ; do
+        faa="$root/hprc-cache/busco/$odb/refseq_db.faa.gz"
 
         if [ ! -e "$faa" ] ; then
             echo "Failed to find '$faa'."
@@ -281,10 +270,14 @@ done
 
 for asm in assembly assembly.haplotype1 assembly.haplotype2 ; do
     if [ ! -e $asm.yak.qv ] ; then
-        yak qv       -t $cpus -l 100000 $root/aws-data/$species/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
+        yak qv       -t $cpus -l 100000 $root/hprc-data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
     fi
     if [ ! -e $asm.yak.trioeavl ] ; then
-        yak trioeval -t $cpus           $root/aws-data/$species/yakmers/mati.yak \
-                                        $root/aws-data/$species/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
+        yak trioeval -t $cpus           $root/hprc-data/$samp/yakmers/mati.yak \
+                                        $root/hprc-data/$samp/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
     fi
-fi
+done
+
+
+touch analysis.complete
+rm -f analysis.jid

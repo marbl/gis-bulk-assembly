@@ -13,14 +13,19 @@ package hprc::samples;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(loadSamples $root %samples);
+@EXPORT = qw(loadSamples $root $rasm %samples);
 
 use strict;
 use warnings "all";
 no  warnings "uninitialized";
 
-our $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc" : "/work/hprc";
+#  These are also set in analyze.sh.
+
+our $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc"               : "/work/hprc";
+our $rasm = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc/assemblies-v3" : "/work/hprc/assemblies-v3";
 our %samples;
+
+$ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
 
 #
 #  Extract the values from within brackets: "[ A,B,C,D ]"

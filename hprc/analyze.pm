@@ -23,44 +23,33 @@ use hprc::samples;
 use hprc::assemble;
 
 
-
-
-
 sub startChromosomeAssignment ($$) {
   my $samp   = shift @_;
   my $opts   = shift @_;
-  my $submit = exists $$opts{"submit"};
-  my $diro   = "$root/assemblies/$samp/chr-assign";
+  my $flav   = $$opts{"flavor"};
+  my $submit = $$opts{"submit"};
+  my $diro   = "$rasm/$samp/$flav/chr-assign";
+
+  #  Check if outputs exist.
+
+  my $finished = -e "$diro/chr-assign.out";
 
   #  Check that inputs exist.
 
-  if (! -e "$root/assemblies/$samp/assembly.fasta") {
-    print STDERR "$samp - Assembly not present.\n";
-    return
-  }
+  my $ready = isFinished($samp, $flav);
 
-  #  Make a place to work.
+  #  Create a script (we don't need to since it exists elsewhere).
 
-  if (! -d "$diro") {
-    system("mkdir -p $diro");
-  }
+  if ($ready && !$finished) {
+    system("mkdir -p $diro")   if (! -d "$diro");
 
-  #  Run, if not finished already.
-
-  if (-e "$diro/chr-assign.out") {
-    print STDERR "$samp - Chromosome Assignment Finished (remove chr-assign/ to rerun).\n";
-  }
-  else {
-    print STDERR "$samp - Chromosome Assignment Running.\n";
-
-    open(CMD, "> $diro/chr-assign.sh") or die "Failed to open 'assemblies/$samp/chr-assign.sh' for writing: $!\n";
-
+    open(CMD, "> $diro/chr-assign.sh") or die "Failed to open '$diro/chr-assign.sh' for writing: $!\n";
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=4\n";
     print CMD "#SBATCH --mem=4g\n";
     print CMD "#SBATCH --time=1:00:00\n";       #  Actually like 5 minutes
-    print CMD "#SBATCH --output=$root/assemblies/$samp.%j.log\n";
+    print CMD "#SBATCH --output=./chr-assign.err\n";
     print CMD "#SBATCH --job-name=va$samp\n";
     print CMD "#\n";
     print CMD "set -e\n";
@@ -69,7 +58,7 @@ sub startChromosomeAssignment ($$) {
     print CMD "mkdir -p $diro\n";
     print CMD "cd       $diro\n";
     print CMD "\n";
-    print CMD "export REF_CACHE=$root/samtools-ref-cache\n";
+    print CMD "export REF_CACHE=$ENV{'REF_CACHE'}\n";
     print CMD "\n";
     print CMD "module load mashmap\n";
     print CMD "\n";
@@ -83,46 +72,57 @@ sub startChromosomeAssignment ($$) {
     print CMD "    --output asm-chr.mashmap.out\n";
     print CMD "fi\n";
     print CMD "\n";
-    print CMD "perl $root/hprc/chromosome-assign.pl < asm-chr.mashmap.out\n";
+    print CMD "perl $root/hprc/chromosome-assign.pl \\\n";
+    print CMD " < asm-chr.mashmap.out \\\n";
+    print CMD " > chr-assign.out \\\n";
+    print CMD "|| \\\n";
+    print CMD "mv chr-assign.out.FAIL\n";
+    print CMD "\n";
+    print CMD "rm -f chr-assign.jid\n";
     print CMD "\n";
     print CMD "exit 0\n";
-
-    system("cd $diro/ && sh ./chr-assign.sh > chr-assign.out 2> chr-assign.err");
-
-    print STDERR "$samp - Chromosome Assignment Finished.\n";
   }
+
+  #  Run, if not finished already.
+
+  if    ($finished)                   { print "$samp/$flav/chr-assign - FINISHED\n"; }
+  elsif (-e "$diro/chr-assign.jid")   { print "$samp/$flav/chr-assign - RUNNING\n"; }
+  elsif (-e "$diro/chr-assign.err")   { print "$samp/$flav/chr-assign - CRASHED\n"; }
+  elsif (! $ready)                    { print "$samp/$flav/chr-assign - ASSEMBLY-NOT-READY\n"; }
+  elsif (! $$opts{"submit"})          { print "$samp/$flav/chr-assign - READY-TO-COMPUTE\n"; }
+  else                                { print "$samp/$flav/chr-assign - SUBMITTED\n"; system("sbatch $diro/chr-assign.sh > $diro/chr-assign.jid"); }
 }
 
 
 sub startTelomereAnalysis ($$) {
   my $samp   = shift @_;
   my $opts   = shift @_;
-  my $submit = exists $$opts{"submit"};
-  my $diro   = "$root/assemblies/$samp/analysis";
+  my $flav   = $$opts{"flavor"};
+  my $submit = $$opts{"submit"};
+  my $diro   = "$rasm/$samp/$flav/analysis";
+
+  #  Check if outputs exist.
+
+  my $finished = -e "$diro/analysis.complete";
 
   #  Check that inputs exist.
 
-  if (! -e "$root/assemblies/$samp/assembly.fasta") {
-    print STDERR "$samp - Assembly not present.\n";
-    return
-  }
+  my $ready = isFinished($samp, $flav);
 
-  #  Make a place to work.
+  #  Create a script (we don't need to since it exists elsewhere).
 
-  if (! -d "$diro") {
-    system("mkdir -p $diro");
+  if ($ready && !$finished) {
+    system("mkdir -p $diro")   if (! -d "$diro");
   }
 
   #  Run, if not finished already.
 
-  if (-e "$root/assemblies/$samp/analysis.out") {
-    print STDERR "$samp - Telomere Analysis finished (remove analysis.out to rerun).\n";
-  }
-  else {
-    print STDERR "$samp - Telomere Analysis Running.\n";
-    system("cd $root/assemblies/$samp && sh ../../hprc/analyze.sh $samp > analysis.out");  # 2> analysis.err
-    print STDERR "$samp - Telomere Analysis Finished.\n";
-  }
+  if    ($finished)                   { print "$samp/$flav/analysis   - FINISHED\n"; }
+  elsif (-e "$diro/analysis.jid")     { print "$samp/$flav/analysis   - RUNNING\n"; }
+  elsif (-e "$diro/analysis.err")     { print "$samp/$flav/analysis   - CRASHED\n"; }
+  elsif (! $ready)                    { print "$samp/$flav/analysis   - ASSEMBLY-NOT-READY\n"; }
+  elsif (! $$opts{"submit"})          { print "$samp/$flav/analysis   - READY-TO-COMPUTE\n"; }
+  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -D $diro $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
 }
 
 1;
