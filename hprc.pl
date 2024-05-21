@@ -10,7 +10,7 @@
 #
 ##
 
-use v5.36;
+use v5.34;
 use strict;
 use warnings "all";
 no  warnings "uninitialized";
@@ -44,8 +44,8 @@ my %readTypes;
 #  Load the sample list and set some config.
 #    ($root is defined in samples.pm)
 #
-loadSamples("$root/hprc-data/b2.tsv");
-loadSamples("$root/hprc-data/b3.tsv");
+loadSamples("$root/hprc-cache/b2.tsv");
+loadSamples("$root/hprc-cache/b3.tsv");
 #oadSamples("washu-pedigree.tsv");
 
 #$ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
@@ -104,7 +104,7 @@ while (scalar(@ARGV) > 0) {
   #  GENOMESCOPE   --samples ...  --submit
   #  HAPMERS       --samples ...  --submit
   #  YAKMERS       --samples ...  --submit
-  #  ASSEMBLE      --samples ...  --submit  --cleanup --archive   [--canu-trio --canu-hifi --trio --hi-c --full]
+  #  ASSEMBLE      --samples ...  --submit  --cleanup --archive   [--canu-trio --canu-hifi --verkko-base --verkko-trio --verkko-hi-c --verkko-thic]
   #  ANALYZE       --samples ...
   #
   #  FETCH and READ-STATS run locally.
@@ -125,11 +125,15 @@ while (scalar(@ARGV) > 0) {
 
   #lsif (($mode eq "read-stats") && ($arg eq "--submit"))  { $opts{"submit"}  = 1; }
 
-  elsif ($arg eq "--canu-trio")    { $opts{"flavor"} = "canu-trio";   }   #  The default is to run both
-  elsif ($arg eq "--canu-hifi")    { $opts{"flavor"} = "canu-hifi";   }   #  verkko-trio then verkko-hi-c.
-  elsif ($arg eq "--verkko-trio")  { $opts{"flavor"} = "verkko-trio"; }   #
-  elsif ($arg eq "--verkko-hi-c")  { $opts{"flavor"} = "verkko-hi-c"; }   #
-  elsif ($arg eq "--verkko-full")  { $opts{"flavor"} = "verkko-full"; }   #
+  elsif ($arg eq "--canu-hifi")     { $opts{"flavor"} = "canu-hifi";   }
+  elsif ($arg eq "--canu-trio")     { $opts{"flavor"} = "canu-trio";   }
+
+  elsif ($arg eq "--verkko-base")   { $opts{"flavor"} = "verkko-base"; }   #  Correction, MBG up through untip.  All depend on this.
+  elsif ($arg eq "--verkko-trio")   { $opts{"flavor"} = "verkko-trio"; }   #  Continue 'base' into a trio assembly.
+  elsif ($arg eq "--verkko-hi-c")   { $opts{"flavor"} = "verkko-hi-c"; }   #  Continue 'base' into a hi-c assembly.
+  elsif ($arg eq "--verkko-thic")   { $opts{"flavor"} = "verkko-thic"; }   #  Continue 'base' into a trio assembly with hi-c for rdna.
+
+  elsif ($arg eq "--verkko-full")   { $opts{"flavor"} = "verkko-full"; }   #  Do everything in one job.
 
 
   elsif ((($mode eq "read-filter") ||

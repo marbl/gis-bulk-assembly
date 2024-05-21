@@ -1,0 +1,126 @@
+
+###############################################################################
+#
+#  This file is part of a pipeline to (help) run Verkko assemblies on
+#  numerous HPRC samples.
+#
+#  This is a 'United States Government Work', and is released in the public
+#  domain.
+#
+##
+
+#
+#  Remove intermediate files once assemblies that depend on them are complete.
+#
+#  In particular, the ONT 'split' directories and 0-correction cannot be removed
+#  from verkko/ until ALL assemblies are complete.
+#
+
+
+sub getDirectorySize ($) {    #
+  my $dd = shift @_;          #  Return the size of a directory in GB.
+  my $sm = 0;                 #
+
+  open(DU, "du -sm $dd |");
+  while (<DU>) {
+    $sm = $1   if (m/^\s*(\d+)\s+/);
+  }
+  close(DU);
+
+  return $sm / 1024.0;
+}
+
+
+sub cleanupAssembly ($$) {
+  my $samp = shift @_;
+  my $opts = shift @_;
+  my @flavs;
+
+  my $fintrio = isFinished($samp, "verkko-trio");
+  my $finhic  = isFinished($samp, "verkko-hi-c");
+  my $finfull = isFinished($samp, "verkko-full");
+  my $finall  = $fintrio && $finhic && $finfull;
+
+  if ($$opts{"flavor"} ne "") {
+    push @flavs, $$opts{"flavor"};
+  }
+  else {
+    push @flavs, "verkko-trio";
+    push @flavs, "verkko-hi-c";
+    push @flavs, "verkko-full";
+    push @flavs, "verkko";
+  }
+
+  foreach my $flav (@flavs) {
+    my $dirn = "$rasm/$samp/$flav";
+
+    if (! -e $dirn) {
+      printf "%7s/%-11s - BEFORE: %6.1fGB - NOT STARTED.\n", $samp, $flav, 0.0;
+      next;
+    }
+
+    printf "%7s/%-11s - BEFORE: ", $samp, $flav;   my $before = getDirectorySize($dirn);
+    printf "%6.1fGB", $before;
+
+    if ((($flav eq "verkko-trio") && (!$fintrio)) ||
+        (($flav eq "verkko-hi-c") && (!$finhic)) ||
+        (($flav eq "verkko-full") && (!$finfull)) ||
+        (($flav eq "verkko")      && (!$finall))) {
+      print " - INCOMPLETE.\n";
+      next;
+    }
+
+    #  Save snakemake and script logs.  Each assembly command does this too.
+    foreach my $d (qw(. 8-hicPipeline/final_contigs)) {
+      if (-e "$dirn/$d/.snakemake")     { system("cd $dirn/$d && tar -cf snakemake-logs.tar .snakemake    && rm -rf .snakemake");    }
+      if (-e "$dirn/$d/batch-scripts")  { system("cd $dirn/$d && tar -cf batch-scripts.tar  batch-scripts && rm -rf batch-scripts"); }
+    }
+
+    #  Remove correction intermediates and copies of ONT reads.
+    if (-e "$dirn/0-correction")        { system("rm -rf $dirn/0-correction");        }
+    if (-e "$dirn/3-align/split")       { system("rm -rf $dirn/3-align/split");       }
+    if (-e "$dirn/3-alignTips/split")   { system("rm -rf $dirn/3-alignTips/split");   }
+    if (-e "$dirn/8-hicPipeline/split") { system("rm -rf $dirn/8-hicPipeline/split"); }
+
+    #  Remove consensus packages and job outputs.  Save logs.
+    foreach my $d (qw(7-consensus 8-hicPipeline/final_contigs/7-consensus)) {
+      if (-e "$dirn/$d/packages/part001.cnspack") { system("rm -rf $dirn/$d/packages/part*.cnspack"); }
+      if (-e "$dirn/$d/packages/part001.fasta")   { system("rm -rf $dirn/$d/packages/part*.fasta");   }
+      if (-e "$dirn/$d/packages")                 { system("cd $dirn/$d && tar -cf packages-logs.tar packages && rm -rf packages"); }
+    }
+
+    #  Remove consensus outputs that are copied to the assembly output directory.
+    foreach my $f (qw(assembly.homopolymer-compressed.layout
+                      assembly.disconnected.fasta
+                      assembly.unassigned.fasta
+                      assembly.fasta
+                      assembly.haplotype1.fasta
+                      assembly.haplotype2.fasta
+                      assembly.ebv.exemplar.fasta  assembly.ebv.fasta
+                      assembly.mito.exemplar.fasta assembly.mito.fasta
+                      assembly.rdna.exemplar.fasta assembly.rdna.fasta
+                      combined.fasta
+                      unitig-popped.fasta
+                      unitig-popped.haplotype1.fasta
+                      unitig-popped.haplotype2.fasta
+                      unitig-popped.unassigned.fasta)) {
+      if (-e "$dirn/7-consensus/$f")                               { system("rm -f $dirn/7-consensus/$f"); }
+      if (-e "$dirn/8-hicPipeline/final_contigs/$f")               { system("rm -f $dirn/8-hicPipeline/final_contigs/$f"); }
+      if (-e "$dirn/8-hicPipeline/final_contigs/7-consensus/$f")   { system("rm -f $dirn/8-hicPipeline/final_contigs/7-consensus/$f"); }
+    }
+
+    #  Save bwa logs and scripts, but wipe the job outputs and databases.
+    if (-e "$dirn/8-hicPipeline/mapped001.bam")   { system("rm -f $dirn/8-hicPipeline/mapped???.bam"); }
+    if (-e "$dirn/8-hicPipeline/align_bwa001.sh") { system("cd $dirn/8-hicPipeline && tar -cf align-bwa-logs.tar align_bwa* && rm -f align_bwa*"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.amb")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.amb"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.ann")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.ann"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.bwt")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.bwt"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.pac")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.pac"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.sa")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.sa"); }
+
+    printf " - AFTER: ";   my $after = getDirectorySize($dirn);
+    printf "%6.1fGB (%.3f%%)\n", $after, 100.0 * $after / $before;
+  }
+}
+
+1;
