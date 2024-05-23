@@ -108,7 +108,7 @@ sub filterReads ($$$) {
   my $submit = exists $$opts{"submit"};
 
   foreach my $type (sort keys %$types) {
-    my %files = getFileMap($samp, $type);
+    my %files = getFileMap($samp, $type, 1);
 
     foreach my $locf (values %files) {
       my $idir = dirname($locf);   #  Path to input file (converted to odir in filter function).

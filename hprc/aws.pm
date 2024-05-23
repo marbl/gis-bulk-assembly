@@ -199,9 +199,10 @@ sub numFiles ($$) {
 #  For a given sample/read-type, returns a map from aws-name to local-name.
 #  If the file hasn't been downloaded, local-name is the empty string.
 #
-sub getFileMap ($$) {
+sub getFileMap ($$@) {
   my $samp  = shift @_;
   my $type  = shift @_;
+  my $nonE  = shift @_;   #  return even if the file doesn't exist.
   my $hics;
   my $hici;
   my $subd;
@@ -253,16 +254,12 @@ sub getFileMap ($$) {
           last;                                           #  extension.
         }
       }
-
-      #if (! -e $locf) {
-      #  $locn =~ s/.(f(ast){0,1}[aq].gz|sam|bam|cram)$//i;   #  Make reported error name reflect
-      #  $locn =~ s!/$samp/!/$samp/$subd/!;                   #  what we're searching for,
-      #}
     }
 
     #  Now insert in the map based on if the file exists or not.
 
     if (-e $locf) { $localmap{$awsf} = $locf; }
+    elsif ($nonE) { $localmap{$awsf} = $locf; }
     else          { $localmap{$awsf} = "";    }
   }
 

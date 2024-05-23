@@ -36,13 +36,14 @@ require "hprc/assemble-cleanup.pm";
 require "hprc/assemble-archive.pm";
 
 
-sub submitIf ($$$$$$$) {
+sub submitIf ($$$$$$$$) {
   my $samp    = shift @_;
   my $flav    = shift @_;
   my $scr     = shift @_;
   my $compl   = shift @_;
   my $previd  = shift @_;
   my $missing = shift @_;
+  my $unavail = shift @_;
   my $submit  = shift @_;
   my $jid     = undef;
   my $wait    = ($previd == 0) ? "" : "--depend=afterany:$previd";
@@ -50,6 +51,7 @@ sub submitIf ($$$$$$$) {
   if    ($compl)              { print "$samp/$flav - FINISHED\n";                return undef; }
   elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";                               }
   elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";                 return undef; }
+  elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";  return undef; }
   elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS\n$missing";  return undef; }
   elsif (! $submit)           { print "$samp/$flav - READY-TO-COMPUTE\n";        return undef; }
   else                        { print "$samp/$flav - SUBMITTED\n";               system("sbatch $wait $scr.sh > $scr.jid"); }
@@ -82,6 +84,18 @@ sub computeAssembly ($$) {
 
   my $compl  = isFinished($samp, $flav);
 
+  #  Fail aggressively if the base assembly isn't present, but others are.
+
+  print STDERR "$samp/$flav - ERROR: a Trio assembly exists but no Base assembly does!  Fix manually.\n"   if (!$complB) && ($complT);
+  print STDERR "$samp/$flav - ERROR: a Hi-C assembly exists but no Base assembly does!  Fix manually.\n"   if (!$complB) && ($complH);
+  print STDERR "$samp/$flav - ERROR: a THiC assembly exists but no Base assembly does!  Fix manually.\n"   if (!$complB) && ($complC);
+  print STDERR "$samp/$flav - ERROR: a THiC assembly exists but no Trio assembly does!  Fix manually.\n"   if (!$complT) && ($complC);
+
+  return   if (((!$complB) && ($complT)) ||
+               ((!$complB) && ($complH)) ||
+               ((!$complB) && ($complC)) ||
+               ((!$complT) && ($complC)));
+
   #  Check which inputs exist.
 
   my $hifi = getDownloadedFiles($samp, "hifi-cutadapt");   #  Return cutadapt form of hifi data.
@@ -101,6 +115,27 @@ sub computeAssembly ($$) {
                        (($hic2 eq "") && (numFiles($samp, "hic")      > 0)));
   my $hapmerMissing = locateHapmers($samp);
 
+  my $tu  = ((numFiles($samp, "mat-ilmn") == 0) || (numFiles($samp, "pat-ilmn") == 0));
+  my $hu  =  (numFiles($samp, "hic")      == 0);
+
+  my $unavailT = "";
+  my $unavailH = "";
+  my $unavailC = "";
+
+  if    ($tu && $hu) {
+    $unavailT = "no trio data";
+    $unavailH = "no hi-c data";
+    $unavailC = "no trio or hi-c data";
+  }
+  elsif ($tu) {
+    $unavailT = "no trio data";
+    $unavailC = "no trio data";
+  }
+  elsif ($hu) {
+    $unavailH = "no hi-c data";
+    $unavailC = "no hi-c data";
+  }
+
   my $baseAsmMissing =   (! -e "$rasm/$samp/verkko-base/contigs.fasta");
   my $trioAsmMissing =   (! -e "$rasm/$samp/verkko-trio/assembly.fasta");
 
@@ -113,9 +148,6 @@ sub computeAssembly ($$) {
   my $missingH;
   my $missingC;
   my $missing;
-
-  print "hifi - ", numFiles($samp, "hifi"), " $hifiMissing - $hifi\n";
-  print "nano - ", numFiles($samp, "ont"),  " $nanoMissing - $nano\n";
 
   my $iflavor;
 
@@ -179,46 +211,39 @@ sub computeAssembly ($$) {
 
   $missing = $missingCH . $missingCT . $missingB . $missingT . $missingH . $missingC;
 
-
   #  If in 'verkko-full' mode, run all verkko assemblies as a set of jobs:
   #      base -> trio -> thic
   #           -> hi-c
   if ($flav eq "verkko-full") {
-    my $scrB = createVerkkoBase   ($samp, $hifi, $nano,               $missingB, $compl);
-    my $scrT = createVerkkoTrio   ($samp, $hifi, $nano,               $missingT, $compl);   #  Trio DBs implicitly exist.
-    my $scrH = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missingH, $compl);
-    my $scrC = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missingC, $compl);
+    my $scrB = createVerkkoBase   ($samp, $hifi, $nano,               $missingB,        "", $compl);
+    my $scrT = createVerkkoTrio   ($samp, $hifi, $nano,               $missingT, $unavailT, $compl);   #  Trio DBs implicitly exist.
+    my $scrH = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missingH, $unavailH, $compl);
+    my $scrC = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missingC, $unavailC, $compl);
 
-    my $jidB = submitIf($samp, "verkko-base", $scrB, $complB, undef, $missingB, $$opts{"submit"});   #  Depends on no earlier job.
-    my $jidT = submitIf($samp, "verkko-trio", $scrT, $complT, $jidB, $missingT, $$opts{"submit"});   #  Depends on base.
-    my $jidH = submitIf($samp, "verkko-hi-c", $scrH, $complH, $jidB, $missingH, $$opts{"submit"});   #  Depends on base.
-    my $jidC = submitIf($samp, "verkko-thic", $scrC, $complC, $jidT, $missingC, $$opts{"submit"});   #  Depends on trio.
+    my $jidB = submitIf($samp, "verkko-base", $scrB, $complB, undef, $missingB,        "", $$opts{"submit"});   #  Depends on no earlier job.
+    my $jidT = submitIf($samp, "verkko-trio", $scrT, $complT, $jidB, $missingT, $unavailT, $$opts{"submit"});   #  Depends on base.
+    my $jidH = submitIf($samp, "verkko-hi-c", $scrH, $complH, $jidB, $missingH, $unavailH, $$opts{"submit"});   #  Depends on base.
+    my $jidC = submitIf($samp, "verkko-thic", $scrC, $complC, $jidT, $missingC, $unavailC, $$opts{"submit"});   #  Depends on base AND trio.
   }
 
   #  Otherwise, run a single flavor.
-
-
-#
-#
-#  SUPPORT for non-trio hi-c only
-#
-#
-
   else {
     my $scr;
+    my $unavail;
 
-    if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $compl); }
-    if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $compl); }
+    if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl); }
+    if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl); }
 
-    if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $compl); }
-    if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $compl); }   #  Trio DBs implicitly exist.
-    if ($flav eq "verkko-hi-c") { $scr = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missing, $compl); }
-    if ($flav eq "verkko-thic") { $scr = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missing, $compl); }
+    if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl); }
+    if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl); }   #  Trio DBs implicitly exist.
+    if ($flav eq "verkko-hi-c") { $scr = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailH, $compl); }
+    if ($flav eq "verkko-thic") { $scr = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailC, $compl); }
 
     if    ($compl)              { print "$samp/$flav - FINISHED\n";         }
     elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";          }
     elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";          }
     elsif ($iflavor)            { print "$samp/$flav - INVALID-FLAVOR '$flav'\n";  }
+    elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";  return undef; }
     elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS\n$missing";  }
     elsif (! $$opts{"submit"})  { print "$samp/$flav - READY-TO-COMPUTE\n"; }
     else                        { print "$samp/$flav - SUBMITTED\n"; system("sbatch $scr.sh > $scr.jid"); }

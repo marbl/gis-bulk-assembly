@@ -20,18 +20,19 @@ sub locateHapmers ($) {     #  In array context, returns the expected locations 
   return wantarray() ? ($mati, $pati) : $missi;
 }
 
-sub createVerkkoTrio ($$$$$) {
+sub createVerkkoTrio ($$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-trio";
   my $hifi  = shift @_;
   my $nano  = shift @_;
   my $missi = shift @_;
+  my $unava = shift @_;
   my $compl = shift @_;
   my $sdir  = "$rasm/$samp";
 
   my ($mati, $pati) = locateHapmers($samp);
 
-  if (!$missi && !$compl) {
+  if (!$missi && !$compl && !$unava) {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
@@ -41,7 +42,7 @@ sub createVerkkoTrio ($$$$$) {
     print CMD "#SBATCH --mem=16g\n";
     print CMD "#SBATCH --time=4-0\n";
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
-    print CMD "#SBATCH --job-name=vat$samp\n";
+    print CMD "#SBATCH --job-name=trio$samp\n";
     print CMD "#\n";
     print CMD "set -o pipefail\n";
     print CMD "set -x\n";

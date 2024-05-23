@@ -10,18 +10,19 @@
 ##
 
 
-sub createVerkkoBase ($$$$$) {
+sub createVerkkoBase ($$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-base";
   my $hifi  = shift @_;
   my $nano  = shift @_;
   my $missi = shift @_;
+  my $unava = shift @_;
   my $compl = shift @_;
   my $sdir  = "$rasm/$samp";
 
   my $ogfa = "5-untip/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip";
 
-  if (!$missi && !$compl) {
+  if (!$missi && !$compl && !$unava) {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
@@ -31,7 +32,7 @@ sub createVerkkoBase ($$$$$) {
     print CMD "#SBATCH --mem=16g\n";
     print CMD "#SBATCH --time=4-0\n";
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
-    print CMD "#SBATCH --job-name=vab$samp\n";
+    print CMD "#SBATCH --job-name=base$samp\n";
     print CMD "#\n";
     print CMD "set -o pipefail\n";
     print CMD "set -x\n";

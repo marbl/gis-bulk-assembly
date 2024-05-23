@@ -74,16 +74,16 @@ sub computeYakmers ($$) {
   my $subm = exists($$opts{"submit"});
   my $yako = "$root/hprc-data/$samp/yakmers";   #  Yakko waves to Wakko and Dot.
 
-  #  Decide which yak we need to compute.  Only child, only parent, or both?
+  #  Decide which mers we can compute.  Only child, only parent, or both?
 
   my $cdata = (numFiles($samp, "ilmn") > 0);
   my $pdata = (numFiles($samp, "mat-ilmn") > 0) && (numFiles($samp, "pat-ilmn") > 0);
+  my $data  = $cdata || $pdata;
 
   #  Check if outputs exist.
 
   my $ccompl   = ($cdata == 0) || ((-e "$yako/ilmn.yak"));
   my $pcompl   = ($pdata == 0) || ((-e "$yako/mati.yak") && (-e "$yako/pati.yak"));
-
   my $compl    = $ccompl && $pcompl;
 
   #  Check that inputs exist.
@@ -160,6 +160,7 @@ sub computeYakmers ($$) {
   if    ($compl)                      { printf "$samp/yakmers - FINISHED         (child:%-12s  parent:%s)\n", $cstat, $pstat; }
   elsif (-e "$yako/yakmers.jid")      { printf "$samp/yakmers - RUNNING          (child:%-12s  parent:%s)\n", $cstat, $pstat; }
   elsif (-e "$yako/yakmers.err")      { printf "$samp/yakmers - CRASHED          (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  #lsif ($unavail)                    { printf "$samp/yakmers - UNAVAILABLE      (child:%-12s  parent:%s)\n", $cstat, $pstat; }
   elsif (! $downl)                    { printf "$samp/yakmers - NOT-FETCHED      (child:%-12s  parent:%s)\n", $cstat, $pstat; }
   elsif (! $$opts{"submit"})          { printf "$samp/yakmers - READY-TO-COMPUTE (child:%-12s  parent:%s)\n", $cstat, $pstat; }
   else                                { printf "$samp/yakmers - SUBMITTED        (child:%-12s  parent:%s)\n", $cstat, $pstat; system("sbatch $yako/yakmers.sh > $yako/yakmers.jid"); }

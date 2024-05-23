@@ -10,7 +10,7 @@
 ##
 
 
-sub createVerkkoHiC ($$$$$$$) {
+sub createVerkkoHiC ($$$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-hi-c";
   my $hifi  = shift @_;
@@ -18,10 +18,11 @@ sub createVerkkoHiC ($$$$$$$) {
   my $hic1  = shift @_;
   my $hic2  = shift @_;
   my $missi = shift @_;
+  my $unava = shift @_;
   my $compl = shift @_;
   my $sdir  = "$rasm/$samp";
 
-  if (!$missi && !$compl) {
+  if (!$missi && !$compl && !$unava) {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
@@ -31,7 +32,7 @@ sub createVerkkoHiC ($$$$$$$) {
     print CMD "#SBATCH --mem=16g\n";
     print CMD "#SBATCH --time=4-0\n";
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
-    print CMD "#SBATCH --job-name=vah$samp\n";
+    print CMD "#SBATCH --job-name=hi-c$samp\n";
     print CMD "#\n";
     print CMD "set -o pipefail\n";
     print CMD "set -x\n";

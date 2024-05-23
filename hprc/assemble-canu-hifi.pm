@@ -10,15 +10,16 @@
 ##
 
 
-sub createCanuHiFi ($$$$) {
+sub createCanuHiFi ($$$$$) {
   my $samp  = shift @_;
   my $flav  = "canu-hifi";
   my $hifi  = shift @_;
   my $missi = shift @_;
+  my $unava = shift @_;
   my $compl = shift @_;
   my $dirn  = "$rasm/$samp";
 
-  if (!$missi && !$compl) {
+  if (!$missi && !$compl && !$unava) {
     system("mkdir -p $dirn")  if (! -d $dirn);
 
     open(CMD, "> $dirn/$flav.sh") or die "Failed to open '$dirn/$flav.sh' for writing: $!\n";

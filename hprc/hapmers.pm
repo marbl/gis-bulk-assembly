@@ -30,10 +30,22 @@ sub computeHapmers ($$) {
   my $hapo   = "$root/hprc-data/$samp/hapmers";
   my $locd  = "/lscratch/\$SLURM_JOB_ID";
 
-  #  Check if outputs exist.
+  #  Decide which mers we can compute.  Only child, only parent, or both?
 
-  my $compl = ((-e "$hapo/mati.hapmers.meryl/merylIndex") &&
-               (-e "$hapo/pati.hapmers.meryl/merylIndex"));
+  my $cdata = (numFiles($samp, "ilmn") > 0);
+  my $pdata = (numFiles($samp, "mat-ilmn") > 0) && (numFiles($samp, "pat-ilmn") > 0);
+
+  #  Check if outputs exist.
+  #   - the child data isn't saved; it's used to compute the parent hapmers.
+  #   - the whole thing is 'finished' if there is no child data, or no parent data, or
+  #     the result exists.
+
+  my $ccompl   = ($cdata == 0) || ((-e "$hapo/mati.hapmers.meryl/merylIndex") && (-e "$hapo/pati.hapmers.meryl/merylIndex"));
+  my $pcompl   = ($pdata == 0) || ((-e "$hapo/mati.hapmers.meryl/merylIndex") && (-e "$hapo/pati.hapmers.meryl/merylIndex"));
+  my $compl    = $ccompl || $pcompl;
+
+  #my $compl = ((-e "$hapo/mati.hapmers.meryl/merylIndex") &&
+  #             (-e "$hapo/pati.hapmers.meryl/merylIndex"));
 
   #  Check that inputs exist.
 
@@ -41,9 +53,25 @@ sub computeHapmers ($$) {
   my ($nmati, $mati) = (numFiles($samp, "mat-ilmn"),      getDownloadedFiles($samp, "mat-ilmn"));
   my ($npati, $pati) = (numFiles($samp, "pat-ilmn"),      getDownloadedFiles($samp, "pat-ilmn"));
 
-  my $downl = ((($nilmn == 0) || ($ilmn ne "")) &&   #  True if there are no reads in the data set or                                                                                                                     
-               (($nmati == 0) || ($mati ne "")) &&   #  all reads are downloaded.  getDownloadedFiles()                                                                                                                        
-               (($npati == 0) || ($pati ne "")));    #  returns empty-string if any file is missing.                                                                                                                           
+  my $cdownl =  (($nilmn == 0) || ($ilmn ne ""));     #  True if there are no reads in the data set or                                                                                                                     
+  my $pdownl = ((($nmati == 0) || ($mati ne "")) &&   #  all reads are downloaded.  getDownloadedFiles()                                                                                                                        
+                (($npati == 0) || ($pati ne "")));    #  returns empty-string if any file is missing.                                                                                                                           
+  my $downl = $cdownl && $pdownl;
+
+  #  Be a little more informative about status.
+
+  my $cstat;
+  my $pstat;
+
+  if    ($cdata  == 0)    { $cstat = "no-data";      }   #  No data exists in bucket.
+  elsif ($ccompl == 1)    { $cstat = "finished";     }   #  Computed OR no data exists.
+  elsif ($cdownl == 0)    { $cstat = "not-fetched";  }   #  Not computed, data exists but not downloaded
+  else                    { $cstat = "ready-to-run"; }   #  Need to compute.
+
+  if    ($pdata  == 0)    { $pstat = "no-data";      }
+  elsif ($pcompl == 1)    { $pstat = "finished";     }
+  elsif ($pdownl == 0)    { $pstat = "not-fetched";  }
+  else                    { $pstat = "ready-to-run"; }
 
   #  Create a script - if data is donwloaded and script doesn't exist.                                                                                                                                                         
 
@@ -139,12 +167,13 @@ sub computeHapmers ($$) {
     close(CMD);
   }
 
-  if    ($compl)                      { print "$samp/hapmers - FINISHED\n"; }
-  elsif (-e "$hapo/hapmers.jid")      { print "$samp/hapmers - RUNNING\n"; }
-  elsif (-e "$hapo/hapmers.err")      { print "$samp/hapmers - CRASHED\n"; }
-  elsif (! $downl)                    { print "$samp/hapmers - NOT-FETCHED\n"; }
-  elsif (! $$opts{"submit"})          { print "$samp/hapmers - READY-TO-COMPUTE\n"; }
-  else                                { print "$samp/hapmers - SUBMITTED\n"; system("sbatch $hapo/hapmers.sh > $hapo/hapmers.jid"); }
+  if    ($compl)                      { printf "$samp/hapmers - FINISHED         (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  elsif (-e "$hapo/hapmers.jid")      { printf "$samp/hapmers - RUNNING          (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  elsif (-e "$hapo/hapmers.err")      { printf "$samp/hapmers - CRASHED          (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  #lsif ($unavail)                    { printf "$samp/hapmers - UNAVAILABLE      (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  elsif (! $downl)                    { printf "$samp/hapmers - NOT-FETCHED      (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  elsif (! $$opts{"submit"})          { printf "$samp/hapmers - READY-TO-COMPUTE (child:%-12s  parent:%s)\n", $cstat, $pstat; }
+  else                                { printf "$samp/hapmers - SUBMITTED        (child:%-12s  parent:%s)\n", $cstat, $pstat; system("sbatch $hapo/hapmers.sh > $hapo/hapmers.jid"); }
 }
 
 1;
