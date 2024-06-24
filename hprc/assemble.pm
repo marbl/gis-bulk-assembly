@@ -48,13 +48,13 @@ sub submitIf ($$$$$$$$) {
   my $jid     = undef;
   my $wait    = ($previd == 0) ? "" : "--depend=afterany:$previd";
 
-  if    ($compl)              { print "$samp/$flav - FINISHED\n";                return undef; }
-  elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";                               }
-  elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";                 return undef; }
-  elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";  return undef; }
-  elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS\n$missing";  return undef; }
-  elsif (! $submit)           { print "$samp/$flav - READY-TO-COMPUTE\n";        return undef; }
-  else                        { print "$samp/$flav - SUBMITTED\n";               system("sbatch $wait $scr.sh > $scr.jid"); }
+  if    ($compl)              { print "$samp/$flav - FINISHED\n";                                return undef; }
+  elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";                                               }
+  elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";                                 return undef; }
+  elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";                  return undef; }
+  elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS (missing $missing)\n";       return undef; }
+  elsif (! $submit)           { print "$samp/$flav - READY-TO-COMPUTE\n";                        return undef; }
+  else                        { print "$samp/$flav - SUBMITTED\n";  system("sbatch $wait $scr.sh > $scr.jid"); }
 
   #  An existing scr.jid means we either just submitted, or the assembly is
   #  already running.  Return that jobid for later use.
@@ -118,23 +118,25 @@ sub computeAssembly ($$) {
   my $tu  = ((numFiles($samp, "mat-ilmn") == 0) || (numFiles($samp, "pat-ilmn") == 0));
   my $hu  =  (numFiles($samp, "hic")      == 0);
 
-  my $unavailT = "";
-  my $unavailH = "";
-  my $unavailC = "";
+#  my $unavailT = "";
+#  my $unavailH = "";
+#  my $unavailC = "";
+#
+#  if    ($tu && $hu) {
+#    $unavailT = "no trio data";
+#    $unavailH = "no hi-c data";
+#    $unavailC = "no trio or hi-c data";
+#  }
+#  elsif ($tu) {
+#    $unavailT = "no trio data";
+#    $unavailC = "no trio data";
+#  }
+#  elsif ($hu) {
+#    $unavailH = "no hi-c data";
+#    $unavailC = "no hi-c data";
+#  }
 
-  if    ($tu && $hu) {
-    $unavailT = "no trio data";
-    $unavailH = "no hi-c data";
-    $unavailC = "no trio or hi-c data";
-  }
-  elsif ($tu) {
-    $unavailT = "no trio data";
-    $unavailC = "no trio data";
-  }
-  elsif ($hu) {
-    $unavailH = "no hi-c data";
-    $unavailC = "no hi-c data";
-  }
+  my ($unavailT, $unavailH, $unavailC) = dataAvailable($samp);
 
   my $baseAsmMissing =   (! -e "$rasm/$samp/verkko-base/contigs.fasta");
   my $trioAsmMissing =   (! -e "$rasm/$samp/verkko-trio/assembly.fasta");
@@ -151,48 +153,66 @@ sub computeAssembly ($$) {
 
   my $iflavor;
 
+  sub combine (@) {
+    if (scalar(@_) == 0)   { return undef; }
+    elsif (scalar(@_) > 1) { return (join ', ', @_[0..@_-2]) . " and $_[-1]"; }
+    else                   { return pop @_; }
+  }
+
   if  ($flav eq "canu-hifi") {
-    $missingCH  = "$samp/canu-hifi -  can't start: missing hifi-cutadapt\n"     if ($hifiMissing);
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    $missingCH = combine(@m);
   }
   if  ($flav eq "canu-trio") {
-    $missingCT  = "$samp/canu-trio -  can't start: missing ont\n"               if ($nanoMissing);
-    $missingCT .= "$samp/canu-trio -  can't start: missing trio\n"              if ($trioMissing);
+    my @m;
+    push @m, "ont"               if ($nanoMissing);
+    push @m, "trio"              if ($trioMissing);
+    $missingCT = combine(@m);
   }
   if (($flav eq "verkko-base") || ($flav eq "verkko-full")) {
-    $missingB   = "$samp/verkko-base -  can't start: missing hifi-cutadapt\n"     if ($hifiMissing);
-    $missingB  .= "$samp/verkko-base -  can't start: missing ont\n"               if ($nanoMissing);
-    #missingB  .= "$samp/verkko-base -  can't start: missing trio\n"              if ($trioMissing);
-    #missingB  .= "$samp/verkko-base -  can't start: missing hic\n"               if ($hicMissing);
-    #missingB  .= "$samp/verkko-base -  can't start: missing base assembly\n"     if ($baseAsmMissing);
-    #missingB  .= "$samp/verkko-base -  can't start: missing trio assembly\n"     if ($trioAsmMissing);
-    #missingB  .= "$samp/verkko-base -  can't start: missing hapmer databases\n"  if ($hapmerMissing);
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    #ush @m, "trio"              if ($trioMissing);
+    #ush @m, "hic"               if ($hicMissing);
+    #ush @m, "base assembly"     if ($baseAsmMissing);
+    #ush @m, "trio assembly"     if ($trioAsmMissing);
+    #ush @m, "hapmer databases"  if ($hapmerMissing);
+    $missingB = combine(@m);
   }
   if (($flav eq "verkko-trio") || ($flav eq "verkko-full")) {
-    $missingT   = "$samp/verkko-trio -  can't start: missing hifi-cutadapt\n"     if ($hifiMissing);
-    $missingT  .= "$samp/verkko-trio -  can't start: missing ont\n"               if ($nanoMissing);
-    $missingT  .= "$samp/verkko-trio -  can't start: missing trio\n"              if ($trioMissing);
-    #missingT  .= "$samp/verkko-trio -  can't start: missing hic\n"               if ($hicMissing);
-    $missingT  .= "$samp/verkko-trio -  can't start: missing base assembly\n"     if ($baseAsmMissing) && ($flav ne "verkko-full");
-    #missingT  .= "$samp/verkko-trio -  can't start: missing trio assembly\n"     if ($trioAsmMissing);
-    $missingT  .= "$samp/verkko-trio -  can't start: missing hapmer databases\n"  if ($hapmerMissing);
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    push @m, "trio"              if ($trioMissing);
+    #ush @m, "hic"               if ($hicMissing);
+    push @m, "base assembly"     if ($baseAsmMissing) && ($flav ne "verkko-full");
+    #ush @m, "trio assembly"     if ($trioAsmMissing);
+    push @m, "hapmer databases"  if ($hapmerMissing);
+    $missingT = combine(@m);
   }
   if (($flav eq "verkko-hi-c") || ($flav eq "verkko-full")) {
-    $missingH   = "$samp/verkko-hi-c -  can't start: missing hifi-cutadapt\n"     if ($hifiMissing);
-    $missingH  .= "$samp/verkko-hi-c -  can't start: missing ont\n"               if ($nanoMissing);
-    #missingH  .= "$samp/verkko-hi-c -  can't start: missing trio\n"              if ($trioMissing);
-    $missingH  .= "$samp/verkko-hi-c -  can't start: missing hic\n"               if ($hicMissing);
-    $missingH  .= "$samp/verkko-hi-c -  can't start: missing base assembly\n"     if ($baseAsmMissing) && ($flav ne "verkko-full");
-    #missingH  .= "$samp/verkko-hi-c -  can't start: missing trio assembly\n"     if ($trioAsmMissing);
-    #missingH  .= "$samp/verkko-hi-c -  can't start: missing hapmer databases\n"  if ($hapmerMissing);
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    #ush @m, "trio"              if ($trioMissing);
+    push @m, "hic"               if ($hicMissing);
+    push @m, "base assembly"     if ($baseAsmMissing) && ($flav ne "verkko-full");
+    #ush @m, "trio assembly"     if ($trioAsmMissing);
+    #ush @m, "hapmer databases"  if ($hapmerMissing);
+    $missingH = combine(@m);
   }
   if (($flav eq "verkko-thic") || ($flav eq "verkko-full")) {
-    $missingC   = "$samp/verkko-thic -  can't start: missing hifi-cutadapt\n"     if ($hifiMissing);
-    $missingC  .= "$samp/verkko-thic -  can't start: missing ont\n"               if ($nanoMissing);
-    $missingC  .= "$samp/verkko-thic -  can't start: missing trio\n"              if ($trioMissing);
-    $missingC  .= "$samp/verkko-thic -  can't start: missing hic\n"               if ($hicMissing);
-    $missingC  .= "$samp/verkko-thic -  can't start: missing base assembly\n"     if ($baseAsmMissing) && ($flav ne "verkko-full");
-    $missingC  .= "$samp/verkko-thic -  can't start: missing trio assembly\n"     if ($trioAsmMissing) && ($flav ne "verkko-full");
-    $missingC  .= "$samp/verkko-thic -  can't start: missing hapmer databases\n"  if ($hapmerMissing);
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    push @m, "trio"              if ($trioMissing);
+    push @m, "hic"               if ($hicMissing);
+    push @m, "base assembly"     if ($baseAsmMissing) && ($flav ne "verkko-full");
+    push @m, "trio assembly"     if ($trioAsmMissing) && ($flav ne "verkko-full");
+    push @m, "hapmer databases"  if ($hapmerMissing);
+    $missingC = combine(@m);
   }
 
   if ($flav eq "") {
@@ -239,14 +259,14 @@ sub computeAssembly ($$) {
     if ($flav eq "verkko-hi-c") { $scr = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailH, $compl); }
     if ($flav eq "verkko-thic") { $scr = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailC, $compl); }
 
-    if    ($compl)              { print "$samp/$flav - FINISHED\n";         }
-    elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";          }
-    elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";          }
-    elsif ($iflavor)            { print "$samp/$flav - INVALID-FLAVOR '$flav'\n";  }
-    elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";  return undef; }
-    elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS\n$missing";  }
-    elsif (! $$opts{"submit"})  { print "$samp/$flav - READY-TO-COMPUTE\n"; }
-    else                        { print "$samp/$flav - SUBMITTED\n"; system("sbatch $scr.sh > $scr.jid"); }
+    if    ($compl)              { print "$samp/$flav - FINISHED\n";                                        }
+    elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";                                         }
+    elsif (-e "$scr.err")       { print "$samp/$flav - CRASHED\n";                                         }
+    elsif ($iflavor)            { print "$samp/$flav - INVALID-FLAVOR '$flav'\n";                          }
+    elsif ($unavail)            { print "$samp/$flav - UNAVAILABLE ($unavail)\n";            return undef; }
+    elsif ($missing)            { print "$samp/$flav - MISSING-INPUTS (missing $missing)\n";               }
+    elsif (! $$opts{"submit"})  { print "$samp/$flav - READY-TO-COMPUTE\n";                                }
+    else                        { print "$samp/$flav - SUBMITTED\n";  system("sbatch $scr.sh > $scr.jid"); }
   }
 }
 

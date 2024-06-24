@@ -6,8 +6,17 @@
 #SBATCH --output=./analysis.err
 #SBATCH --job-name=va$samp
 #
+
+module load samtools
+module load mashmap
+module load bedtools
+module load yak
+module load minimap2
+
 set -e
 set -x
+
+trap "rm -f analysis.jid" EXIT
 
 cpus=$SLURM_CPUS_PER_TASK
 
@@ -15,18 +24,16 @@ refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
 refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 
 samp=$1
-root="/data/walenzbp/hprc"
+root="/data/Phillippy2/projects/hprc-assemblies"
+
+compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
+compledir=`dirname $compleasm`
+
 
 #mkdir -p $root/assemblies-v2/$samp/$flav/analysis
 #cd       $root/assemblies-v2/$samp/$flav/analysis
 
 export REF_CACHE=$root/hprc-cache/samtools
-
-module load samtools
-module load mashmap
-module load bedtools
-module load yak
-module load minimap2
 
 #
 #  This is getOutput.sh (it calls getComplete.sh at the end)
@@ -104,12 +111,21 @@ grep -w -f tmp3 telomere.bed| sort -sk1,1 > tmp4
 join tmp4 tmp5  \
     | awk -v PREV="" '{if ($1 != PREV) { if (PREV != "" && C >=1 && E >=1 ) print PREV; PREV=$1; C=0; E=0 } if ($2 < 51000) C++; if ($3 + 51000 > $NF && $NF > 50000 ) { E++; } } END { if (C >=1 && E >= 1) print PREV}' > t2t_ctgs
 
-echo Ungapped two telomere: $( cat t2t_ctgs | wc -l )
-grep -w -f t2t_ctgs telomere.bed
+echo ""
+if [ -s t2t_ctgs ] ; then
+    echo Ungapped two telomere: $( cat t2t_ctgs | wc -l )
+    grep -w -f t2t_ctgs telomere.bed
+else
+    echo Ungapped two telomere: NONE
+fi
 
 echo ""
-echo Gapped two telomere: $( cat t2t_scfs | wc -l )
-grep -w -f t2t_scfs telomere.bed
+if [ -s t2t_scfs ] ; then
+    echo Gapped two telomere: $( cat t2t_scfs | wc -l )
+    grep -w -f t2t_scfs telomere.bed
+else
+    echo Gapped two telomere: NONE
+fi
 
 #
 #  This is get.sh
@@ -121,14 +137,7 @@ if [ ! -e assembly-ref.norm.mashmap ]; then
 fi
 
 if [ ! -e assembly-ref.comp.mashmap ]; then
-    ctgname="unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip"
-	  contigs="../../verkko/5-untip/$ctgname.fasta"
-
-    #  Fallback; $contigs should already exist.
-    if [ ! -e $contigs ] ; then
-    fi
-
-    mashmap -r $refc -q $contigs --pi 95 -s 10000 -t 8 -o assembly-ref.comp.mashmap
+    mashmap -r $refc -q ../../verkko-base/contigs.fasta --pi 95 -s 10000 -t 8 -o assembly-ref.comp.mashmap
 fi
 
 g="."
@@ -202,40 +211,45 @@ echo  > nc-to-chr.sed
 #cho >> nc-to-chr.sed 's/NC_053523.1/chrM/g'
 
 
-echo -e "node\tchr" > assembly.homopolymer-compressed.chr.csv
-for i in $( cat assembly-ref.comp.mashmap |awk '{if ($NF > 99) print $6}'|sort |uniq ); do
-    echo "Chr $i"
+if [ ! -e assembly.homopolymer-compressed.chr.csv ] ; then
+    echo -e "node\tchr" > assembly.homopolymer-compressed.chr.csv
+    for i in $( cat assembly-ref.comp.mashmap |awk '{if ($NF > 99) print $6}'|sort |uniq ); do
+        echo "Chr $i"
+        cat assembly-ref.comp.mashmap | \
+            awk '{if ($NF > 99 && $4-$3 > 5000000) print $1"\t"$6"\t"$2}' | \
+            grep -w $i |sort -srnk3,3 | \
+            awk '{print $1"\t"$2}' | \
+            sort | \
+            uniq | \
+            grep "$cg" | \
+            sed -f nc-to-chr.sed >> assembly.homopolymer-compressed.chr.csv
+    done
+
+    cat assembly.homopolymer-compressed.chr.csv | awk '{print $1}' | sort | uniq > tmp4
+
+    /data/korens/devel/sg_sandbox/gfacpp/build/neighborhood ../assembly.homopolymer-compressed.noseq.gfa tmp.gfa -n tmp4 --drop-sequence -r 1000
+
+    cat tmp.gfa | grep "^S" |awk '{print $2}' > tmp4
+
+    #second pass to get missing chr w/shorter matches
     cat assembly-ref.comp.mashmap | \
-    awk '{if ($NF > 99 && $4-$3 > 5000000) print $1"\t"$6"\t"$2}' | \
-    grep -w $i |sort -srnk3,3 | \
-    awk '{print $1"\t"$2}' | \
-    sort | \
-    uniq | \
-    grep "$cg" | \
-    sed -f nc-to-chr.sed >> assembly.homopolymer-compressed.chr.csv
-done
+        grep -w -v -f tmp4 | \
+        awk '{if ($NF > 99 && $4-$3 > 500000) print $1"\t"$6}' | \
+        sort | \
+        uniq | \
+        grep "$cg" | \
+        sed -f nc-to-chr.sed >> assembly.homopolymer-compressed.chr.csv
+fi
 
-cat assembly.homopolymer-compressed.chr.csv | awk '{print $1}' | sort | uniq > tmp4
+if [ ! -e translation_hap1 -o ! -e translation_hap2 ] ; then
+    cat assembly-ref.norm.mashmap | grep "$label1" | grep $g | awk '{if ($NF > 99 && $4-$3 > 1000000) print $1"\t"$6"\t"$2"\t"$7}' | sort | uniq | sed -f nc-to-chr.sed > translation_hap1
+    cat assembly-ref.norm.mashmap | grep "$label2" | grep $g | awk '{if ($NF > 99 && $4-$3 > 1000000) print $1"\t"$6"\t"$2"\t"$7}' | sort | uniq | sed -f nc-to-chr.sed > translation_hap2
+fi
 
-/data/korens/devel/sg_sandbox/gfacpp/build/neighborhood ../assembly.homopolymer-compressed.noseq.gfa tmp.gfa -n tmp4 --drop-sequence -r 1000
-
-cat tmp.gfa | grep "^S" |awk '{print $2}' > tmp4
-
-#second pass to get missing chr w/shorter matches
-cat assembly-ref.comp.mashmap | \
-grep -w -v -f tmp4 | \
-awk '{if ($NF > 99 && $4-$3 > 500000) print $1"\t"$6}' | \
-sort | \
-uniq | \
-grep "$cg" | \
-sed -f nc-to-chr.sed >> assembly.homopolymer-compressed.chr.csv
-
-
-cat assembly-ref.norm.mashmap | grep "$label1" | grep $g | awk '{if ($NF > 99 && $4-$3 > 1000000) print $1"\t"$6"\t"$2"\t"$7}' | sort | uniq | sed -f nc-to-chr.sed > translation_hap1
-cat assembly-ref.norm.mashmap | grep "$label2" | grep $g | awk '{if ($NF > 99 && $4-$3 > 1000000) print $1"\t"$6"\t"$2"\t"$7}' | sort | uniq | sed -f nc-to-chr.sed > translation_hap2
-
-cat translation_hap1|sort -k2,2 | awk '{if ($3 > 15000000) print $0}' | awk -v LAST="" -v S="" '{if (LAST != $2) { if (S > 0) print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG; SUM=0; MAX=0; C=0; } LAST=$2; S=$NF; SUM+=$3; if (MAX < $3) MAX=$3; C+=1; TIG=$1} END {print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG;}' | awk '{print $1"\t"$4}' | sort -nk1,1 -s > chr_completeness_max_hap1
-cat translation_hap2|sort -k2,2 | awk '{if ($3 > 15000000) print $0}' | awk -v LAST="" -v S="" '{if (LAST != $2) { if (S > 0) print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG; SUM=0; MAX=0; C=0; } LAST=$2; S=$NF; SUM+=$3; if (MAX < $3) MAX=$3; C+=1; TIG=$1} END {print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG;}' | awk '{print $1"\t"$4}' | sort -nk1,1 -s > chr_completeness_max_hap2
+if [ ! -e chr_completeness_max_hap1 -o ! -e chr_completeness_max_hap2 ] ; then
+    cat translation_hap1|sort -k2,2 | awk '{if ($3 > 15000000) print $0}' | awk -v LAST="" -v S="" '{if (LAST != $2) { if (S > 0) print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG; SUM=0; MAX=0; C=0; } LAST=$2; S=$NF; SUM+=$3; if (MAX < $3) MAX=$3; C+=1; TIG=$1} END {print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG;}' | awk '{print $1"\t"$4}' | sort -nk1,1 -s > chr_completeness_max_hap1
+    cat translation_hap2|sort -k2,2 | awk '{if ($3 > 15000000) print $0}' | awk -v LAST="" -v S="" '{if (LAST != $2) { if (S > 0) print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG; SUM=0; MAX=0; C=0; } LAST=$2; S=$NF; SUM+=$3; if (MAX < $3) MAX=$3; C+=1; TIG=$1} END {print LAST"\t"C"\t"SUM/S*100"\t"MAX/S*100"\t"TIG;}' | awk '{print $1"\t"$4}' | sort -nk1,1 -s > chr_completeness_max_hap2
+fi
 
 rm -f tmp tmp? tmp.gfa
 
@@ -243,41 +257,60 @@ rm -f tmp tmp? tmp.gfa
 #  /data/walenzbp/hprc/software/marbl_utils/asm_evaluation/getYakStats.sh sh
 #
 
+#  Old hacked version of compleasm.
+#
+#for asm in assembly.haplotype1 assembly.haplotype2 ; do
+#    for odb in `cd $root/hprc-cache/busco ; ls -d *odb10` ; do
+#        faa="$root/hprc-cache/busco/$odb/refseq_db.faa.gz"
+#
+#        if [ ! -e "$faa" ] ; then
+#            echo "Failed to find '$faa'."
+#            exit 1
+#        fi
+#
+#        if [ ! -e $asm.$odb.full_table.tsv ]; then
+#            if [ ! -s $asm.$odb.aln.gff ]; then
+#                $root/software/miniprot/miniprot -u --outs=0.95 -t$cpus --gff ../$asm.fasta $faa > $asm.$odb.aln.gff
+#            fi
+#
+#            #  This came from minibusco dbf13d032cd6790c7d992f993abc3b604acc5cea
+#            #  with a small bugfix.
+#            python3 $root/hprc/analyze-miniprot.py \
+#                    -g $asm.$odb.aln.gff \
+#                    --full_table_file $asm.$odb.full_table.tsv \
+#                    --complete_file $asm.$odb.summary.txt
+#        fi
+#    done
+#done
+
+
 for asm in assembly.haplotype1 assembly.haplotype2 ; do
-    for odb in `cd $root/hprc-cache/busco ; ls -d *odb10` ; do
-        faa="$root/hprc-cache/busco/$odb/refseq_db.faa.gz"
-
-        if [ ! -e "$faa" ] ; then
-            echo "Failed to find '$faa'."
-            exit 1
-        fi
-
-        if [ ! -e $asm.$odb.full_table.tsv ]; then
-            if [ ! -s $asm.$odb.aln.gff ]; then
-                $root/software/miniprot/miniprot -u --outs=0.95 -t$cpus --gff ../$asm.fasta $faa > $asm.$odb.aln.gff
-            fi
-
-            #  This came from minibusco dbf13d032cd6790c7d992f993abc3b604acc5cea
-            #  with a small bugfix.
-            python3 $root/hprc/analyze-miniprot.py \
-                    -g $asm.$odb.aln.gff \
-                    --full_table_file $asm.$odb.full_table.tsv \
-                    --complete_file $asm.$odb.summary.txt
+    for db in primates_odb10 ; do
+        if [ ! -e $asm.$db.full_table.tsv -o ! -e $asm.$db.summary.txt ]; then
+            $compleasm run -t$cpus -l $db --library_path $compledir/mb_downloads -a ../$asm.fasta -o $asm \
+            && \
+            mv $asm/summary.txt        $asm.$db.summary.txt \
+            && \
+            mv $asm/$db/full_table.tsv $asm.$db.full_table.tsv
         fi
     done
 done
 
 
 for asm in assembly assembly.haplotype1 assembly.haplotype2 ; do
-    if [ ! -e $asm.yak.qv ] ; then
+    if [ ! -e $asm.yak.qv -a -e $root/hprc-data/$samp/yakmers/ilmn.yak ] ; then
         yak qv       -t $cpus -l 100000 $root/hprc-data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
+    else
+        touch $asm.yak.qv.NO_ILMN_DATA
     fi
-    if [ ! -e $asm.yak.trioeavl ] ; then
+    if [ ! -e $asm.yak.trioeavl -a -e $root/hprc-data/$samp/yakmers/mati.yak -a -e $root/hprc-data/$samp/yakmers/pati.yak ] ; then
         yak trioeval -t $cpus           $root/hprc-data/$samp/yakmers/mati.yak \
                                         $root/hprc-data/$samp/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
+    else
+        touch $asm.yak.trioeval.NO_MATI_or_PATI_DATA
     fi
 done
 
 
 touch analysis.complete
-rm -f analysis.jid
+#  'analysis.jid' removed by trap on EXIT.

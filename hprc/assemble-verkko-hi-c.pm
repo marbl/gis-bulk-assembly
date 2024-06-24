@@ -22,7 +22,7 @@ sub createVerkkoHiC ($$$$$$$$) {
   my $compl = shift @_;
   my $sdir  = "$rasm/$samp";
 
-  if (!$missi && !$compl && !$unava) {
+  if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
@@ -76,10 +76,10 @@ sub createVerkkoHiC ($$$$$$$$) {
     print CMD "    --hic1 $hic1 \\\n";
     print CMD "    --hic2 $hic2 \\\n";
     print CMD "  && \\\n";
-    print CMD "  tar -C $flav               -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz                   && rm -rf $flav/.snakemake && \\\n";
-    print CMD "  tar -C $flav/8-hicPipeline -cf - .snakemake    | gzip -9 > $flav/8-hicPipeline/snakemake.tar.gz     && rm -rf $flav/8-hicPipeline/.snakemake && \\\n";
-    print CMD "  tar -C $flav               -cf - batch-scripts | gzip -9 > $flav/batch-scripts.tar.gz               && rm -rf $flav/batch-scripts && \\\n";
-    print CMD "  tar -C $flav/8-hicPipeline -cf - batch-scripts | gzip -9 > $flav/8-hicPipeline/batch-scripts.tar.gz && rm -rf $flav/8-hicPipeline/batch-scripts\n";
+    print CMD "  tar -C $flav                             -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz                                 && rm -rf $flav/.snakemake && \\\n";
+    print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - .snakemake    | gzip -9 > $flav/8-hicPipeline/final_contigs/snakemake.tar.gz     && rm -rf $flav/8-hicPipeline/final_contigs.snakemake && \\\n";
+    print CMD "  tar -C $flav                             -cf - batch-scripts | gzip -9 > $flav/batch-scripts.tar.gz                             && rm -rf $flav/batch-scripts && \\\n";
+    print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - batch-scripts | gzip -9 > $flav/8-hicPipeline/final_contigs/batch-scripts.tar.gz && rm -rf $flav/8-hicPipeline/final_contigsbatch-scripts\n";
     print CMD "fi\n";
     print CMD "\n";
     print CMD "rm -f $sdir/$flav.jid\n";

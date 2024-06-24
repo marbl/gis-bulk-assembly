@@ -19,7 +19,7 @@ sub createCanuHiFi ($$$$$) {
   my $compl = shift @_;
   my $dirn  = "$rasm/$samp";
 
-  if (!$missi && !$compl && !$unava) {
+  if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $dirn")  if (! -d $dirn);
 
     open(CMD, "> $dirn/$flav.sh") or die "Failed to open '$dirn/$flav.sh' for writing: $!\n";

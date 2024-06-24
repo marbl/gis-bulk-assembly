@@ -13,7 +13,7 @@ package hprc::samples;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(loadSamples $root $rasm %samples);
+@EXPORT = qw(loadSamples numFiles dataAvailable $root $rasm %samples);
 
 use strict;
 use warnings "all";
@@ -21,8 +21,8 @@ no  warnings "uninitialized";
 
 #  These are also set in analyze.sh.
 
-our $root = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc"               : "/work/hprc";
-our $rasm = -e "/data/walenzbp/hprc" ? "/data/walenzbp/hprc/assemblies-v3" : "/work/hprc/assemblies-v3";
+our $root = "/data/Phillippy2/projects/hprc-assemblies";
+our $rasm = "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
@@ -127,6 +127,57 @@ sub loadSamples ($) {
 
     $samples{$id} = $s;
   }
+}
+
+
+#
+#  Return the number of files for a given sample and type.
+#  This is NOT the number of files that are present locally;
+#  use getFileMap() to get that list.
+#
+sub numFiles ($$) {
+  my $samp  = shift @_;
+  my $type  = shift @_;
+
+  $type = "hifi"   if ($type eq "hifi-cutadapt");
+
+  my $fles  = $samples{$samp}{$type};
+  return (defined($fles)) ? scalar(@$fles) : 0
+}
+
+
+
+
+sub dataAvailable ($@) {
+  my $samp = shift @_;
+  my $flav = shift @_;
+
+  my $tu  = ((numFiles($samp, "mat-ilmn") == 0) || (numFiles($samp, "pat-ilmn") == 0));
+  my $hu  =  (numFiles($samp, "hic")      == 0);
+
+  my $uT = "";
+  my $uH = "";
+  my $uC = "";
+
+  if    ($tu && $hu) {
+    $uT = "no trio data";
+    $uH = "no hi-c data";
+    $uC = "no trio or hi-c data";
+  }
+  elsif ($tu) {
+    $uT = "no trio data";
+    $uC = "no trio data";
+  }
+  elsif ($hu) {
+    $uH = "no hi-c data";
+    $uC = "no hi-c data";
+  }
+
+  if (!defined($flav))           { return($uT, $uH, $uC); }
+  elsif ($flav eq "verkko-trio") { return $uT; }
+  elsif ($flav eq "verkko-hi-c") { return $uH; }
+  elsif ($flav eq "verkko-thic") { return $uC; }
+  else                           { return "";  }
 }
 
 1;

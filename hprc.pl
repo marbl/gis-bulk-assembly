@@ -136,13 +136,11 @@ while (scalar(@ARGV) > 0) {
   elsif ($arg eq "--verkko-full")   { $opts{"flavor"} = "verkko-full"; }   #  Do everything in one job.
 
 
-  elsif ((($mode eq "read-filter") ||
-          ($mode eq "assemble")) && ($arg eq "--cleanup")) {
+  elsif (($mode eq "assemble") && ($arg eq "--cleanup")) {
     $opts{"cleanup"} = 1;
   }
 
-  elsif ((($mode eq "read-filter") ||
-          ($mode eq "assemble")) && ($arg eq "--archive")) {
+  elsif (($mode eq "assemble") && ($arg eq "--archive")) {
     $opts{"archive"} = 1;
   }
 
@@ -241,19 +239,7 @@ if (($opts{'submit'}) && ($ENV{'HOSTNAME'} =~ m/helix/)) {
 
 if (($mode eq "help") || (scalar(@errs) > 0)) {
   print "usage: $0 mode [options]";
-  print "  MODES:\n";
-  print "    list [--type all|hifi|etc] [--files]\n";
-  print "    status\n";
-  print "    fetch [--type all|hifi|etc]\n";
-  print "    read-stats\n";    #  --reads or --assembly
-  print "    genomescope [--submit]\n";
-  print "    hapmers [--submit]\n";
-  print "    yakmers [--submit]\n";
-  print "    assemble [--trio, --hi-c, --full, --canu-trio, --canu-hifi] [--sample ...] [--submit]\n";
-  print "    analyze\n";
-  print "\n";
-  print "  OPTIONS:\n";
-  print "  --sample [sample ...]   - restrict operation to the specified samples\n";
+  print "  <see the docs>\n";
   print "\n";
   print "ERROR: $_\n"  foreach (@errs);
   exit(1);
@@ -358,12 +344,12 @@ elsif ($mode eq "analyze") {
   }
 
   foreach my $s (sort keys %sampleList) {
-    if ($opts{"flavor"} eq "") {
+    if (($opts{"flavor"} eq "") || ($opts{"flavor"} eq "verkko-full")) {
       #opts{"flavor"} = "canu-trio";    startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);    #  These don't support Canu
       #opts{"flavor"} = "canu-hifi";    startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);    #  output names.
       $opts{"flavor"} = "verkko-trio";  startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);
       $opts{"flavor"} = "verkko-hi-c";  startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);
-      $opts{"flavor"} = "verkko-full";  startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);
+      $opts{"flavor"} = "verkko-thic";  startChromosomeAssignment($s, \%opts);   startTelomereAnalysis($s, \%opts);
       $opts{"flavor"} = "";
     }
     else {

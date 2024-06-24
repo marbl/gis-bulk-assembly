@@ -36,7 +36,8 @@ sub startChromosomeAssignment ($$) {
 
   #  Check that inputs exist.
 
-  my $ready = isFinished($samp, $flav);
+  my $ready   = isFinished($samp, $flav);
+  my $unavail = dataAvailable($samp, $flav);
 
   #  Create a script (we don't need to since it exists elsewhere).
 
@@ -88,6 +89,7 @@ sub startChromosomeAssignment ($$) {
   if    ($finished)                   { print "$samp/$flav/chr-assign - FINISHED\n"; }
   elsif (-e "$diro/chr-assign.jid")   { print "$samp/$flav/chr-assign - RUNNING\n"; }
   elsif (-e "$diro/chr-assign.err")   { print "$samp/$flav/chr-assign - CRASHED\n"; }
+  elsif ($unavail)                    { print "$samp/$flav/chr-assign - UNAVAILABLE ($unavail)\n"; }
   elsif (! $ready)                    { print "$samp/$flav/chr-assign - ASSEMBLY-NOT-READY\n"; }
   elsif (! $$opts{"submit"})          { print "$samp/$flav/chr-assign - READY-TO-COMPUTE\n"; }
   else                                { print "$samp/$flav/chr-assign - SUBMITTED\n"; system("sbatch $diro/chr-assign.sh > $diro/chr-assign.jid"); }
@@ -107,7 +109,8 @@ sub startTelomereAnalysis ($$) {
 
   #  Check that inputs exist.
 
-  my $ready = isFinished($samp, $flav);
+  my $ready   = isFinished($samp, $flav);
+  my $unavail = dataAvailable($samp, $flav);
 
   #  Create a script (we don't need to since it exists elsewhere).
 
@@ -119,7 +122,8 @@ sub startTelomereAnalysis ($$) {
 
   if    ($finished)                   { print "$samp/$flav/analysis   - FINISHED\n"; }
   elsif (-e "$diro/analysis.jid")     { print "$samp/$flav/analysis   - RUNNING\n"; }
-  elsif (-e "$diro/analysis.err")     { print "$samp/$flav/analysis   - CRASHED\n"; }
+  elsif (-e "$diro/analysis.err")     { print "$samp/$flav/analysis   - CRASHED (move $diro/analysis.err to restart)\n"; }
+  elsif ($unavail)                    { print "$samp/$flav/analysis   - UNAVAILABLE ($unavail)\n"; }
   elsif (! $ready)                    { print "$samp/$flav/analysis   - ASSEMBLY-NOT-READY\n"; }
   elsif (! $$opts{"submit"})          { print "$samp/$flav/analysis   - READY-TO-COMPUTE\n"; }
   else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -D $diro $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }

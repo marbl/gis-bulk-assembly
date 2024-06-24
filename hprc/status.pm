@@ -26,84 +26,6 @@ use hprc::samples;
 use hprc::assemble;
 
 
-#  Returns the Slurm JobID of the last known running verkko command,
-#  or undef if no known last job.
-#
-#sub findJobID ($$) {
-#  my $samp = shift @_;
-#  my $flav = shift @_;
-#  my $dirn = "$rasm/$samp";
-#  my $jid  = undef;
-#
-#  print "Query $dirn/$flav.jid.\n";
-#  if (-e "$dirn/$flav.jid") {
-#    open(JID, "< $dirn/$flav.jid") or die "Failed to open '$dirn/$flav.jid' for reading: $!\n";
-#    $jid = int(<JID>);
-#    close(JID);
-#  }
-#
-#  die "No job id.\n" if (!defined($jid));
-#  return($jid);
-#}
-
-
-#  Returns 'status' of the last known verkko command.
-#  This came from verkko/src/profiles/slurm-sge-status.sh.
-#
-#sub findJobStatus ($$$) {
-#  my $samp = shift @_;
-#  my $flav = shift @_;
-#  my $dirn = "$rasm/$samp";
-#  my $jid  = shift @_;
-#
-#  my $state = "UNKNWON";
-#
-#  if (-x "/usr/local/bin/dashboard_cli") {
-#    my ($jobid, $state, $reason, $out);
-#
-#    open(JOBS, "dashboard_cli jobs --noheader --tab --fields jobid,state,state_reason,std_out --jobid $jid|") or die "Failed to open 'dashboard_cli jobs' for reading: $!\n";
-#    while (<JOBS>) {
-#      ($jobid, $state, $reason, $out) = split '\s+', $_;
-#
-#      last if ($jobid eq $jid);
-#    }
-#    close(JOBS);
-#
-#    if (!defined($jobid)) {
-#      print STDERR "Didn't get a report for job $jid from Slurm.  Can't check if I can safely submit.\n";
-#      exit(0);
-#    }
-#
-#    if    (($state eq "COMPLETED")) {
-#      $state = "COMPLETED";
-#    }
-#    elsif (($state eq "PENDING") ||
-#           ($state eq "CONFIGURING") ||
-#           ($state eq "RUNNING") ||
-#           ($state eq "SUSPENDED") ||
-#           ($state eq "PREEMPTED") ||
-#           ($state eq "COMPLETING")) {
-#      $state = "RUNNING";
-#    }
-#    elsif (($state eq "BOOT_FAIL") ||
-#           ($state eq "CANCELLED") ||
-#           ($state eq "DEADLINE") ||
-#           ($state eq "FAILED") ||
-#           ($state eq "NODE_FAIL") ||
-#           ($state eq "OUT_OF_MEMORY") ||
-#           ($state eq "PREEMPTED") ||
-#           ($state eq "TIMEOUT")) {
-#      $state = "FAILED";
-#    }
-#    else {
-#      $state = "UNKNOWN";
-#    }
-#  }
-#
-#  return($state);
-#}
-
-
 sub checkStatus ($$) {
   my $samp = shift @_;
   my $opts = shift @_;
@@ -149,9 +71,9 @@ sub checkStatus ($$) {
 
   return      if (scalar(@logs) == 0);
 
-  #  Get slurm info.
+  #  Get slurm info without calling sacct over and over.
   #    - scan logs to find the earliest/latest job dates.
-  #    - request all jobs from sdlurm for those dates.
+  #    - request info on all jobs for those dates.
   #
   my $bgnTime = 1999999999;   my $bgnDate = "Tue May 17 23:33:20 2033";
   my $endTime = 1000000000;   my $endDate = "Sat Sep  8 21:46:40 2001";
@@ -163,7 +85,7 @@ sub checkStatus ($$) {
     while (<LOG>) {
       chomp;
 
-      if (m/202\d\]$/) {  #  This is to catch errors parsing dates.
+      if (m/202\d\]$/) {  #  This is so we can catch errors parsing dates.
         if (m/^\s*\[(Sun|Mon|Tue|Wed|Th[ur]|Fri|Sat)\s(...\s+\d+\s\d\d:\d\d:\d\d\s\d\d\d\d)\]$/) {
           my  $tt = str2time($2);
           my ($ss, $mm, $hh, $da, $mo, $yr, $zn, $cn) = strptime($2);
@@ -193,7 +115,7 @@ sub checkStatus ($$) {
   while (<SLM>) {
     chomp; 
     if (m/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.?\d*)$/) {
-      #print "$1 -> start='$2' end='$3' queue='$4' elapsed='$5' maxmem='$6' avgcpu='$7'\n";
+      printf "%10s -> start=%10s end=%10s queue=%10s elapsed=%10s maxmem=%10s avgcpu=%10s\n", $1, $2, $3, $4, $5, $6, $7;
       $jobToStart{$1}   = $2;
       $jobToEnd{$1}     = $3;
       $jobToQTime{$1}   = $4;
@@ -237,10 +159,6 @@ sub checkStatus ($$) {
     my %submitted;
     my %resubmit;
     my %completed;
-
-    #print "\n";
-    #print "Scan $log\n";
-    #print "\n";
 
     open(LOG, "< $log") or die "Failed to open log '$log' for reading: $!\n";
     while (<LOG>) {
@@ -292,13 +210,10 @@ sub checkStatus ($$) {
         my $r = $resubmit {$tid};
         my $c = $completed{$tid};
 
-        if ($jid1 ne "local") {
+        if ($jid1 ne "(local)") {
           my $r = $tid2rule{$tid};
 
-          #print "$r job $jid1 elap $jobToElapsed{$jid1} cpu $jobToAvgCPU{$jid1}\n";
-          #print "$r $stageCPU{$r}\n";
           $stageCPU   {$r} += ($jobToElapsed{$jid1} * $jobToAvgCPU{$jid1});
-          #print "$r $stageCPU{$r}\n";
           $stageWmin  {$r}  = $jobToStart{$jid1}     if (!exists($stageWmin{$r})) || ($stageWmin{$r} > $jobToStart{$jid1});
           $stageWmax  {$r}  = $jobToEnd{$jid1}       if (!exists($stageWmax{$r})) || ($stageWmax{$r} < $jobToEnd{$jid1});
           $stageWall  {$r} += $jobToElapsed{$jid1};
@@ -306,7 +221,7 @@ sub checkStatus ($$) {
           $stageMaxMem{$r}  = $jobToMaxMem{$jid1}    if ($stageMaxMem{$r} < $jobToMaxMem{$jid1});
         }
 
-        if ($jid1 ne $jid2) {
+        if (($jid1 ne $jid2) && ($jid1 ne "(local)")) {
           my $r = $tid2rule{$tid};
 
           $stageCPU   {$r} += ($jobToElapsed{$jid2} * $jobToAvgCPU{$jid2});

@@ -71,7 +71,7 @@ sub archiveAssembly($$) {
         print CMD "fi\n";
         close(CMD);
 
-        print STDOUT "  sbatch $path/$adir.tar.sh > $path/$adir.tar.jid\n";
+        print STDOUT "  sbatch $path/$adir.tar.sh > $path/$adir.tar.jid", (($subm) ? "" : " (not submitted)"), "\n";
         system("sbatch $path/$adir.tar.sh > $path/$adir.tar.jid 2>&1")   if ($subm);
       }
     }

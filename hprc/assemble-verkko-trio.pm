@@ -32,7 +32,7 @@ sub createVerkkoTrio ($$$$$$) {
 
   my ($mati, $pati) = locateHapmers($samp);
 
-  if (!$missi && !$compl && !$unava) {
+  if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";

@@ -46,7 +46,7 @@ sub displaySummary ($$$) {
   #  Read sequence summaries.
 
   foreach my $t (sort keys %$types) {
-    my %files = getFileMap($samp, $t);
+    my %files = getFileMap($samp, $t, "even-those-that-don't-exist");
     my $nReads = 0;
     my $nBases = 0;
 
@@ -151,7 +151,7 @@ sub displayDetails ($$$) {
   my $samp  = shift @_;
   my $type  = shift @_;
   my $opts  = shift @_;
-  my %files = getFileMap($samp, $type);
+  my %files = getFileMap($samp, $type, "even-those-that-don't-exist");
 
   #print "Type $t has ", scalar(values %files), " files.\n";
 
@@ -302,7 +302,7 @@ sub displayFiles ($$$$) {
   my $type    = shift @_;
   my $typen   = shift @_;
   my $opts    = shift @_;
-  my %filemap = getFileMap($samp, $type);
+  my %filemap = getFileMap($samp, $type, "and-the-one-that-have-been-deleted");
 
   my $awss = awssiz($samp, \%filemap);
   my $locs = locsiz($samp, \%filemap);
@@ -335,8 +335,8 @@ sub displaySizes ($$$) {
   #  If 'hifi' is requested, also show 'hifi-cutadapt'.
   $$types{'hifi-cutadapt'} = 1   if ($$types{'hifi'});
 
-  foreach my $t (keys %$types) {        #  Sum aws and loc sizes for any types supplied, but if 'hifi-cutadapt'
-    my %fm = getFileMap($samp, $t);     #  is explictly requested, ignore the aws size (it's included in 'hifi').
+  foreach my $t (keys %$types) {         #  Sum aws and loc sizes for any types supplied, but if 'hifi-cutadapt'
+    my %fm = getFileMap($samp, $t, 1);   #  is explictly requested, ignore the aws size (it's included in 'hifi').
 
     $awstot += awssiz($samp, \%fm)   if ($t ne "hifi-cutadapt");   #  See displayFiles() above too!
     $loctot += locsiz($samp, \%fm);

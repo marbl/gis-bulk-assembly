@@ -1,0 +1,209 @@
+
+`hprc.pl` is a semi-automated helper for downloading, preprocessing,
+assemblying and analyzing hprc data.  There are no known technical reasons
+why it couldn't be fully-automated; BPW felt it was easier to create and work
+with it being only semi-automagic.  hprc.pl follows the usual "command
+subcommand" structure.
+
+It requires the non-default latest version of perl; module load perl.
+
+Subcommands:
+  fetch        - fetch read data from AWS
+  list         - show samples and lots of info about reads
+  read-stats   - generate statistics for reads
+  read-filter  - run cutadapt on hifi, generates hifi-cutadapt read type
+  genomescope  - run genomescope on child hifi and ilmn, and parent ilmn
+  hapmers      - generate verkko trio hapmers
+  yakmers      - generate yak databases for QC
+  assemble     - assemble using verkko or canu; most of your pain will be here
+  status       - shows status of assemblies, and job times
+  analyze      - generate analyses of the assembled data
+
+Most subcommands will submit their work to Slurm; fetch and read-stats are
+the exceptions.
+
+GLOBAL OPTIONS (after the subcommand)
+
+  --sample[s] list  - restrict the subcommand to only the listed
+                      samples; separated by spaces
+
+  --read-type list  - restrcit the subcommand to only the listed
+                      read types; separated by spaces
+
+                      Valid read-types:
+                        hifi (and hifi-cutadapt)
+                        ont
+                        ilmn
+                        hic (and hic1, hic2)
+                        mat-ilmn
+                        pat-ilmn
+
+                      'hifi' are the reads as downloaded from aws.  These are
+                      used ONLY to compute 'hifi-cutadapt' during read-filter,
+                      and can be removed after that is complete.
+
+  --submit          - submit computational jobs to Slurm; without this
+                      option the subcommand will behave as a dry-run.
+                      DOES NOT APPLY TO read-stats.
+
+Nearly every subcommand takes --sample and --read-type.
+
+Details on how --submit is handled (or not) are described in each subcommand
+below.
+
+----------------------------------------
+FETCH
+
+Fetch data from aws, places in $root/hprc-data/$samp/.
+
+No options.  Use 'list' below to see what is already downloaded.
+Other subcommands will (generally) complain and fail if
+data has not been downloaded.
+
+----------------------------------------
+LIST
+
+Shows available samples, downloaded data, and computed read statistics.
+
+[no-options]
+  With no options, it prints the list of known samples.
+
+--sizes [--files]
+  Displays a table of file sizes on AWS and the local file system.
+  When --files is also supplied, expands the table to show individual
+  files and their local file system location.
+
+--summary
+  Displays, for each data type, coverage and genomescope heterozygosity.
+
+--details
+  Displays, for hifi and ont reads, read length and coverage histograms.
+  Note that the display of ont details is not instantaneous; each file
+  takes several seconds.
+
+----------------------------------------
+READ-STATS
+
+Computes read length statistics for hifi and ont data.  RUNS IN IMMEDIATE
+MODE, not on Slurm.  The compute is lightweight (2 CPUs, 8GB should be
+sufficent) but slow.
+
+The hifi-cutadapt read-type does NOT have statistics generated for it,
+only the original reads are summarized.
+
+After read-filter and read-stats are finished, the original 'hifi' data can
+be purged.
+
+
+----------------------------------------
+READ-FILTER
+
+Runs cutadapt (biowulf module version) on hifi data to generate the
+hifi-cutadapt read-type used for assembly.
+
+Requires input 'hifi' data type, creates output 'hifi-cutadapt' data type.
+After read-filter and read-stats are finished, the original 'hifi' data can be purged.
+
+Will submit jobs to Slurm if --submit is also supplied; without it,
+a brief description of the status of each job is displayed.
+
+----------------------------------------
+GENOMESCOPE
+
+Runs genomescope on hifi-cutadapt, child ilmn and mat-ilmn/pat-ilmn.
+K-mer level data is NOT saved, only the k-mer histogram and genomescope
+outputs are saved.
+
+Will submit jobs to Slurm if --submit is also supplied; without it,
+a brief description of the status of each job is displayed.
+
+----------------------------------------
+HAPMERS and YAKMERS
+
+Computes Canu/Verkko hapmers (necessary for trio based assemblies) or Yak
+k-mers (necessary for post-assembly analysis).
+
+Will submit jobs to Slurm if --submit is also supplied; without it,
+a brief description of the status of each job is displayed.
+
+----------------------------------------
+ASSEMBLE
+
+Assemble reads to scaffolds using verkko or canu.  Six types of
+assemblies can be computed:
+  --canu-trio
+  --canu-hifi
+  --verkko-base
+  --verkko-trio (depends on verkko-base)
+  --verkko-hi-c (depends on verkko-base)
+  --verkko-thic (depends on verkko-base)
+
+The verkko assemblies are interrelated:
+  verkko-base depends on nothing
+  verkko-trio depends on verkko-base
+  verkko-hi-c depends on verkko-base
+  verkko-thic depends on verkko-base AND verkko-trio
+An alias, --verkko-full, will run the four verkko assemblies in a Slurm dependency chain.
+
+Will submit jobs to Slurm if --submit is also supplied; without it,
+a brief description of the status of each job is displayed.
+
+
+In addition to the assembly-type options, two cleanup options are accepted:
+
+--cleanup
+  Remove a large collection of intermediate and redundant files if the
+  assembly is both finished and not needed for a later assembly (e.g., base
+  will not be cleaned until all other assemblies are complete).
+
+  Will also tar and gzip many of the scripts and logs, in particular, all the
+  overlap, alignment, consensus and snakemake logs/scripts are cleaned up.
+
+  This is relatively quick and will run locally.
+
+  Much pain will ensue if base is cleaned up and then the two hi-c assemblies
+  are restarted - each assembly will attempt to regenerate the split ont
+  reads and step on each other.
+
+--archive
+  Tar and gzip (pigz) the intermediate subdirectories [0-9]-*.
+
+  Will submit jobs to Slurm if --submit is also supplied; without it,
+  the job script is created but not submitted.
+
+
+----------------------------------------
+STATUS
+
+Originally was intended to show the job-status of running assemblies (and still does,
+but 'assemble' does it better).  With option --times, will show run-time accounting
+for the assembly.  Should be refactored into the 'assemble' command.
+
+--times
+  Displays total wall and CPU time for each stage in the assembly.
+
+  NOTA BENE!  Wall clock time for stages that run multiple times or for
+  stages that are restarted after a crash are wildly incorrect.  The wall
+  clock time is computed by subtracting the time of the first job start from
+  the time of the last job completion.  A better method would be to subtract
+  the same, but only for jobs whose run times overlap.
+
+  NOTA BENE!  CPU time is estimated by multiplying average-cpu-utilization
+  with job-wall-time as dashboard_cli doesn't expose actual CPU time.
+
+--jobs
+  Displays 'raw data' for each job.
+
+----------------------------------------
+ANALYZE
+
+Computes post-assembly scaffold-to-chromosome mappings and various QV, BUSCO,
+T2T statistics and mappings.  Two jobs are submitted for each assembly, one
+for chomosome assignment and one for everything else.
+
+Chromosome assignments are in directory {sample}/{assembly}/chr-assign.
+
+Everything else is in directory {sample}/{assembly}/analysis.
+
+Will submit jobs to Slurm if --submit is also supplied; without it,
+a brief description of the status of each job is displayed.

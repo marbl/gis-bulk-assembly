@@ -13,7 +13,7 @@ package hprc::aws;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(awsToLocalPath awsToLocalInfo awsToLocalName fetchInfo getRemoteSize getLocalSize fetchData numFiles getFileMap getDownloadedFiles);
+@EXPORT = qw(awsToLocalPath awsToLocalInfo awsToLocalName fetchInfo getRemoteSize getLocalSize fetchData getFileMap getDownloadedFiles);
 
 use strict;
 use warnings "all";
@@ -137,7 +137,7 @@ sub fetchData ($$$) {
   foreach my $type (sort keys %$types) {
     my $files = $samples{$samp}{$type};
 
-    foreach my $f (@$files) {
+    foreach my $f (sort @$files) {
       my $awsf = $f;                                     #  So we don't accidentally corrupt the file list.
       my $locf = awsToLocalPath($samp, $f);
       #y $awso = $f =~ s!^s3://human-pangenomics/!!/r;   #  Needed for s3api.
@@ -178,22 +178,6 @@ sub fetchData ($$$) {
     }
   }
 }
-
-#
-#  Return the number of files for a given sample and type.
-#  This is NOT the number of files that are present locally;
-#  use getFileMap() to get that list.
-#
-sub numFiles ($$) {
-  my $samp  = shift @_;
-  my $type  = shift @_;
-
-  $type = "hifi"   if ($type eq "hifi-cutadapt");
-
-  my $fles  = $samples{$samp}{$type};
-  return (defined($fles)) ? scalar(@$fles) : 0
-}
-
 
 #
 #  For a given sample/read-type, returns a map from aws-name to local-name.
@@ -281,7 +265,7 @@ sub getDownloadedFiles ($$) {
     return ""   if (! -e $f);    #  if not, return empty string.
   }
 
-  return join " ", values %m;
+  return join " ", sort values %m;
 }
 
 1;

@@ -36,19 +36,23 @@ sub cleanupAssembly ($$) {
   my $opts = shift @_;
   my @flavs;
 
-  my $fintrio = isFinished($samp, "verkko-trio");
-  my $finhic  = isFinished($samp, "verkko-hi-c");
-  my $finfull = isFinished($samp, "verkko-full");
-  my $finall  = $fintrio && $finhic && $finfull;
+  my $ta = ((numFiles($samp, "mat-ilmn") > 0) && (numFiles($samp, "pat-ilmn") > 0));
+  my $ha =  (numFiles($samp, "hic")      > 0);
+  my $th = $ta && $ha;
 
-  if ($$opts{"flavor"} ne "") {
+  my $finbase = isFinished($samp, "verkko-base");          #  Base is finished if it is finished.
+  my $fintrio = isFinished($samp, "verkko-trio") || !$ta;  #  Trio is finished if it is finished or not available.
+  my $finhic  = isFinished($samp, "verkko-hi-c") || !$ha;  #  Hi-C ... same
+  my $finthic = isFinished($samp, "verkko-thic") || !$th;
+
+  if (($$opts{"flavor"} ne "") && ($$opts{"flavor"} ne "verkko-full")) {
     push @flavs, $$opts{"flavor"};
   }
   else {
-    push @flavs, "verkko-trio";
-    push @flavs, "verkko-hi-c";
-    push @flavs, "verkko-full";
-    push @flavs, "verkko";
+    push @flavs, "verkko-base";
+    push @flavs, "verkko-trio"  if ($ta);
+    push @flavs, "verkko-hi-c"  if ($ha);
+    push @flavs, "verkko-thic"  if ($ta && $ha);
   }
 
   foreach my $flav (@flavs) {
@@ -62,13 +66,28 @@ sub cleanupAssembly ($$) {
     printf "%7s/%-11s - BEFORE: ", $samp, $flav;   my $before = getDirectorySize($dirn);
     printf "%6.1fGB", $before;
 
-    if ((($flav eq "verkko-trio") && (!$fintrio)) ||
+    if ((($flav eq "verkko-base") && (!$finbase)) ||
+        (($flav eq "verkko-trio") && (!$fintrio)) ||
         (($flav eq "verkko-hi-c") && (!$finhic)) ||
-        (($flav eq "verkko-full") && (!$finfull)) ||
-        (($flav eq "verkko")      && (!$finall))) {
+        (($flav eq "verkko-thic") && (!$finthic))) {
       print " - INCOMPLETE.\n";
       next;
     }
+
+    my $unused = ($finbase && $fintrio && $finhic && $finthic);
+
+    if ($flav eq "verkko-base")   { $unused = ($finbase && $fintrio && $finhic && $finthic); }
+    if ($flav eq "verkko-trio")   { $unused = ($finbase && $fintrio &&            $finthic); }
+    if ($flav eq "verkko-hi-c")   { $unused = ($finbase &&             $finhic            ); }
+    if ($flav eq "verkko-thic")   { $unused = ($finbase && $fintrio &&            $finthic); }
+
+    if (!$unused) {
+      print " - COMPLETE but in-use.\n";
+      next;
+    }
+
+    #print " - COMPLETE.\n";   #  For testing!
+    #next;
 
     #  Save snakemake and script logs.  Each assembly command does this too.
     foreach my $d (qw(. 8-hicPipeline/final_contigs)) {
@@ -77,10 +96,11 @@ sub cleanupAssembly ($$) {
     }
 
     #  Remove correction intermediates and copies of ONT reads.
-    if (-e "$dirn/0-correction")        { system("rm -rf $dirn/0-correction");        }
-    if (-e "$dirn/3-align/split")       { system("rm -rf $dirn/3-align/split");       }
-    if (-e "$dirn/3-alignTips/split")   { system("rm -rf $dirn/3-alignTips/split");   }
-    if (-e "$dirn/8-hicPipeline/split") { system("rm -rf $dirn/8-hicPipeline/split"); }
+    if (-e "$dirn/0-correction")        { system("rm -rf $dirn/0-correction");           }
+    if (-e "$dirn/3-align/split")       { system("rm -rf $dirn/3-align/split");          }
+    if (-e "$dirn/3-align/split")       { system("rm -rf $dirn/3-align/split.finished"); }
+    if (-e "$dirn/3-alignTips/split")   { system("rm -rf $dirn/3-alignTips/split");      }
+    if (-e "$dirn/8-hicPipeline/split") { system("rm -rf $dirn/8-hicPipeline/split");    }
 
     #  Remove consensus packages and job outputs.  Save logs.
     foreach my $d (qw(7-consensus 8-hicPipeline/final_contigs/7-consensus)) {

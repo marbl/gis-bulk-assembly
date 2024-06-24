@@ -22,7 +22,7 @@ sub createVerkkoBase ($$$$$$) {
 
   my $ogfa = "5-untip/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip";
 
-  if (!$missi && !$compl && !$unava) {
+  if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $sdir")  if (! -d $sdir);
 
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
@@ -55,6 +55,7 @@ sub createVerkkoBase ($$$$$$) {
     print CMD "#\n";
     print CMD "\n";
     print CMD "if [ ! -e $flav/contigs.fasta ] ; then\n";
+    print CMD "  if [ ! -e '$flav/emptyfile' ] ; then touch $flav/emptyfile ; fi\n";
     print CMD "  $root/software/verkko/bin/verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "    --snakeopts '--until untip' \\\n";
     print CMD "    --ovb-run 8 32 32 \\\n";
