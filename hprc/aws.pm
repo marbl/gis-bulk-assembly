@@ -81,6 +81,9 @@ sub fetchInfo ($$) {
 
   if (! -e "$info") {
     print STDERR "  Fetch AWS ls for $file.\n";
+    if (system("aws --version > /dev/null 2>&1") != 0) {
+      die "aws failed to run; probably need 'module load aws'.\n";
+    }
     system("mkdir -p hprc-cache/aws/$samp")    if (! -d "hprc-cache/aws/$samp");
     system("aws --no-sign-request s3 ls $file > $info 2> $info.err");
   }
@@ -148,6 +151,10 @@ sub fetchData ($$$) {
       }
 
       printf "%7s/%-9s FETCH  - %s\n", $samp, "$type:", $locf;
+
+      if (system("aws --version > /dev/null 2>&1") != 0) {
+        die "aws failed to run; probably need 'module load aws'.\n";
+      }
 
       #y $c = "aws --no-sign-request s3api get-object --bucket human-pangenomics --key '$awso' --range bytes=0-1048576 '$locf' > $locf.err 2>&1";
       #y $c = "seqrequester generate -min 1000 -max 10000 -sequences 100 -gaussian | gzip -1c > '$locf'";
