@@ -24,6 +24,10 @@ the exceptions.
 
 GLOBAL OPTIONS (after the subcommand)
 
+  --v3 / --v4       - run assemblies in v3 or v4; switches assembly
+                      assembly directory AND sample list, but both
+                      use software in software/ (not, e.g., software-v4).
+
   --sample[s] list  - restrict the subcommand to only the listed
                       samples; separated by spaces
 

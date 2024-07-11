@@ -36,33 +36,46 @@ my @errs;
 my $mode = (scalar(@ARGV) > 0) ? shift @ARGV : "help";
 my %opts;
 
-
 my %sampleList;
 my %readTypes;
-
-#
-#  Load the sample list and set some config.
-#    ($root is defined in samples.pm)
-#
-loadSamples("$root/hprc-cache/b2.tsv");
-loadSamples("$root/hprc-cache/b3.tsv");
-#oadSamples("washu-pedigree.tsv");
-
-#$ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
 
 #
 #  Parse args.
 #   - the first arg ('mode') is set above.
 #   - the rest of the args are conditional on the mode selected,
 #     though some are options are available for every mode.
-#
+#   - choice of samples and output directory is conditional
+#     on options
+#       --v3
+#       --v4
+#     though software is ALWAYS 'software/', and not 'software-v3/' or
+#     'software-v4/'.
 
 while (scalar(@ARGV) > 0) {
   my $arg = $ARGV[0];  shift @ARGV;
 
+  #  Select a set of samples to use.
+  #
+  if ($arg =~ /^--v(\d+)$/) {
+    my $v = $1;
+
+    if ($v == 3) {
+      loadSamples("$root/hprc-cache/b2.tsv");
+      loadSamples("$root/hprc-cache/b3.tsv");
+      $rasm = "$root/assemblies-v3";
+    }
+    elsif ($v == 4) {
+      loadSamples("$root/hprc-cache/b5-6.tsv");
+      loadSamples("$root/hprc-cache/b8.tsv");
+      $rasm = "$root/assemblies-v4";
+    }
+    else {
+    }
+  }
+
   #  --samples is available for every mode.
   #
-  if ($arg =~ m/^--samples?$/)  {
+  elsif ($arg =~ m/^--samples?$/)  {
     while ((scalar(@ARGV) > 0) &&      #  While more words
            ($ARGV[0] !~ m/^-/)) {      #  and not an option word,
       $sampleList{ shift @ARGV } = 1;  #  add sample to the list
@@ -178,7 +191,7 @@ if ((scalar(keys %sampleList) == 0) ||   #  If no samples supplied, or
     }
     $ms .= " and '$ls'"  if (defined($ls));
 
-    push @errs, "Sample$ss $ms not known.\n";
+    push @errs, "Sample$ss $ms not known.";
   }
 }
 
@@ -230,11 +243,15 @@ if (($mode ne "help") &&
     ($mode ne "yakmers") &&
     ($mode ne "assemble") &&
     ($mode ne "analyze")) {
-  push @errs, "Invalid mode '$mode'.\n";
+  push @errs, "Invalid mode '$mode'.";
 }
 
 if (($opts{'submit'}) && ($ENV{'HOSTNAME'} =~ m/helix/)) {
-  push @errs, "Can't --submit on host helix.\n";
+  push @errs, "Can't --submit on host helix.";
+}
+
+if (scalar(keys %samples) == 0) {
+  push @errs, "No known samples; you probably need to specify --v3 or --v4 or similar.";
 }
 
 if (($mode eq "help") || (scalar(@errs) > 0)) {

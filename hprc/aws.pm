@@ -140,6 +140,8 @@ sub fetchData ($$$) {
   foreach my $type (sort keys %$types) {
     my $files = $samples{$samp}{$type};
 
+    next  if (!defined($files));
+
     foreach my $f (sort @$files) {
       my $awsf = $f;                                     #  So we don't accidentally corrupt the file list.
       my $locf = awsToLocalPath($samp, $f);

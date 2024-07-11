@@ -22,7 +22,7 @@ no  warnings "uninitialized";
 #  These are also set in analyze.sh.
 
 our $root = "/data/Phillippy2/projects/hprc-assemblies";
-our $rasm = "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
+our $rasm = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
