@@ -284,14 +284,16 @@ rm -f tmp tmp? tmp.gfa
 #done
 
 
-for asm in assembly.haplotype1 assembly.haplotype2 ; do
+for asm in assembly.haplotype1 assembly.haplotype2 assembly.unassigned ; do
     for db in primates_odb10 ; do
         if [ ! -e $asm.$db.full_table.tsv -o ! -e $asm.$db.summary.txt ]; then
             $compleasm run -t$cpus -l $db --library_path $compledir/mb_downloads -a ../$asm.fasta -o $asm \
             && \
             mv $asm/summary.txt        $asm.$db.summary.txt \
             && \
-            mv $asm/$db/full_table.tsv $asm.$db.full_table.tsv
+            mv $asm/$db/full_table.tsv $asm.$db.full_table.tsv \
+            && \
+            rm -rf $asm/$db/hmmer_output
         fi
     done
 done
