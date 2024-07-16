@@ -30,6 +30,7 @@ use hprc::hapmers;
 use hprc::yakmers;
 use hprc::assemble;
 use hprc::analyze;
+use hprc::ribotin;
 
 
 my @errs;
@@ -102,6 +103,7 @@ while (scalar(@ARGV) > 0) {
           ($mode eq "genomescope") ||
           ($mode eq "hapmers") ||
           ($mode eq "yakmers") ||
+          ($mode eq "ribotin") ||
           ($mode eq "assemble") ||
           ($mode eq "analyze")) && ($arg eq "--submit")) {
     $opts{"submit"} = 1;
@@ -241,6 +243,7 @@ if (($mode ne "help") &&
     ($mode ne "genomescope") &&
     ($mode ne "hapmers") &&
     ($mode ne "yakmers") &&
+	($mode ne "ribotin") &&
     ($mode ne "assemble") &&
     ($mode ne "analyze")) {
   push @errs, "Invalid mode '$mode'.";
@@ -376,3 +379,14 @@ elsif ($mode eq "analyze") {
   }
 }
 
+elsif ($mode eq "ribotin") {
+  foreach my $s (sort keys %sampleList) {
+    if (($opts{"flavor"} eq "") || ($opts{"flavor"} eq "verkko-full")) {
+      $opts{"flavor"} = "verkko-hi-c";  startRibotinAnalysis($s, \%opts);
+      $opts{"flavor"} = "";
+    }
+    else {
+      startRibotinAnalysis($s, \%opts);
+    }
+  }
+}
