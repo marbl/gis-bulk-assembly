@@ -49,7 +49,7 @@ sub startRibotinAnalysis($$) {
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=8\n";
     print CMD "#SBATCH --mem=20g\n";
-    print CMD "#SBATCH --time=48:00:00\n";       #  Actually like 5 minutes
+    print CMD "#SBATCH --time=10:00:00\n";
     print CMD "#SBATCH --output=$diro/ribotin.%j.err\n";
     print CMD "#SBATCH --job-name=rib$samp\n";
     print CMD "#\n";
@@ -73,6 +73,7 @@ sub startRibotinAnalysis($$) {
     # we make a copy of the ribotin template sequences because liftoff was crashing when too many DBs were pointed to the same gff
     print CMD "cp -r $root/software/ribotin/template_seqs ./\n";
     print CMD "ribotin-verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --mbg $root/software/verkko/lib/verkko/bin/MBG \\\n";
+    print CMD "    -t \$SLURM_CPUS_PER_TASK \\\n";
     print CMD "    -x human \\\n";
     print CMD "    --guess-tangles-using-reference ./template_seqs/chm13_rDNAs.fa \\\n";
     print CMD "    --orient-by-reference           ./template_seqs/rDNA_one_unit.fasta \\\n";
