@@ -9,9 +9,11 @@
 
 module load samtools
 module load mashmap
+module load mash
 module load bedtools
 module load yak
 module load minimap2
+module load seqtk
 
 set -e
 set -x
@@ -25,6 +27,8 @@ refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 
 samp=$1
 root="/data/Phillippy2/projects/hprc-assemblies"
+base=`pwd`
+base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c/base/g |sed s/trio/base/g`
 
 compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`
@@ -44,27 +48,34 @@ if [ ! -e ../assembly.fasta.fai ]; then
     samtools faidx ../assembly.fasta
 fi
 
-if [ ! -e telomere ] ; then
-    echo "Find telomere."
-    /data/korens/devel/utils/telomere/find ../assembly.fasta > telomere
-fi
-
 #  Find telomeres
 if [ ! -e telomere.bed ] ; then
     echo "Find telomere.bed."
-    java -cp /data/korens/devel/utils FindTelomereWindows telomere 99.9 \
-        | awk '{if ($NF > 0.5) print $2"\t"$4"\t"$5"\t"$3"\t"$NF}' \
-        | sed s/\>//g \
-        | bedtools merge -d -500 -i - -c 4 -o distinct \
-        | bedtools sort -i - \
-        | bedtools merge -i - > telomere.bed
+    seqtk telo -d 50000 ../assembly.fasta > telomere.tmp
+    # also trim off the start/end of the sequence and find telomere again because seqtk sometimes misses telomere in these cases
+    seqtk trimfq -b 2000 -e 2000 ../assembly.fasta > tmp.fa
+    seqtk telo -d 50000 tmp.fa >> telomere.tmp
+    seqtk trimfq -b 4000 -e 4000 ../assembly.fasta > tmp.fa
+    seqtk telo -d 50000 tmp.fa >> telomere.tmp
+    cat telomere.tmp | bedtools sort | bedtools merge -c 4 -o max > telomere.bed
+    rm -f ./telomere.tmp ./tmp.fa
 fi
-
 
 #  Find gaps
 if [ ! -e assembly.gaps ] ; then
     echo "Find gaps."
-    java -jar -Xmx4g $root/software/merqury/trio/fastaGetGaps.jar ../assembly.fasta assembly.gaps
+    seqtk gap ../assembly.fasta > assembly.gaps
+fi
+
+# remove rDNA and add telomere nodes
+if [ ! -e assembly.homopolymer-compressed.add_telo.noseq.gfa ]; then
+   ln -s ../assembly.colors.csv
+   repeatUnit="/data/Phillippy/references/hg38/rDNA_compressed.fasta"
+   cat ../assembly.homopolymer-compressed.gfa |awk '{if (match($1, "^S")) { print ">"$2; print $3}}' | mash sketch -i - -o sketch.msh
+   mash screen sketch.msh $repeatUnit | awk '{if ($1 > 0.9 && $4 < 0.05) print $NF}' > rdna.nodes
+   python /data/korens/devel/verkko-tip/lib/verkko/scripts/remove_nodes_add_telomere.py -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python /data/korens/devel/verkko-tip/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   rm -f ./assembly.colors.csv
 fi
 
 #
@@ -137,7 +148,7 @@ if [ ! -e assembly-ref.norm.mashmap ]; then
 fi
 
 if [ ! -e assembly-ref.comp.mashmap ]; then
-    mashmap -r $refc -q ../../verkko-base/contigs.fasta --pi 95 -s 10000 -t 8 -o assembly-ref.comp.mashmap
+    mashmap -r $refc -q ../../$base/contigs.fasta --pi 95 -s 10000 -t 8 -o assembly-ref.comp.mashmap
 fi
 
 g="."
@@ -252,6 +263,48 @@ if [ ! -e chr_completeness_max_hap1 -o ! -e chr_completeness_max_hap2 ] ; then
 fi
 
 rm -f tmp tmp? tmp.gfa
+
+# this is chromosome assignment
+isXY=`grep chrY translation_hap* |wc -l |awk '{print $1}'`
+if [ $isXY -ne 0 ]; then
+   yak sexchr -t 8 $root/hprc-data/chrY-no-par.yak $root/hprc-data/chrX-no-par.yak $root/hprc-data/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
+fi
+
+if [ ! -e assembly.refOriented.fasta ]; then
+   sh /data/korens/devel/marbl_utils/verkko_helpers/reorientByRef.sh assembly-ref.norm.mashmap > assembly-ref.reorient.tsv
+   cat assembly-ref.reorient.tsv |awk '{print $1}' > tmp
+   grep -w -v -f tmp ../assembly.fasta.fai |awk '{print $1"\t0\t"$2}' >>  assembly-ref.reorient.tsv
+   rm ./tmp
+
+   java -cp /data/korens/devel/utils:. SubFasta  assembly-ref.reorient.tsv ../assembly.fasta >  assembly.refOriented.fasta
+   for i in `seq 1 2`; do
+      parent=`echo $i |awk '{if ($1 == 1) print "mat"; else print "pat"}'`
+      # we have XY then we use the assignment information to make sure chrX is is haplotype 1 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
+      if [ $isXY -ne 0 ]; then
+         if [ $parent = "mat" ]; then
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > include.tmp
+           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
+         elif [ $parent = "pat" ]; then
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > include.tmp
+           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
+         fi
+	  else
+	     touch ./ignore.tmp
+		 > tmp
+      fi
+      grep "_haplotype$i" assembly-ref.reorient.tsv >> tmp || true
+      grep "_$parent" assembly-ref.reorient.tsv >> tmp || true
+      grep "_homozygous" assembly-ref.reorient.tsv >> tmp || true
+      grep -v chr  assembly-ref.reorient.tsv |grep "$parent" >> tmp || true
+      grep -v chr  assembly-ref.reorient.tsv |grep "haplotype$i" >> tmp || true
+      cat tmp | sort |uniq | grep -w -v -f ignore.tmp > tmp2
+      java -cp /data/korens/devel/utils:. SubFasta tmp2 ../assembly.fasta > assembly.refOriented.haplotype$i.fasta
+
+      rm -f ./tmp? ./ignore.tmp ./include.tmp
+   done
+fi
 
 #
 #  /data/walenzbp/hprc/software/marbl_utils/asm_evaluation/getYakStats.sh sh
