@@ -43,6 +43,7 @@ sub createVerkkoHiC ($$$$$$$$) {
     print CMD "\n";
     print CMD "export REF_CACHE=$ENV{'REF_CACHE'}\n";
     print CMD "\n";
+    print CMD "module load python   # ensure we load newer python as we need 3.8+ for hic\n";
     print CMD "module load winnowmap\n";
     print CMD "module load mashmap\n";
     print CMD "module load samtools\n";
