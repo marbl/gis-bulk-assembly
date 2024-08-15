@@ -307,8 +307,6 @@ if [ ! -e assembly.refOriented.fasta ]; then
 fi
 
 #
-#  /data/walenzbp/hprc/software/marbl_utils/asm_evaluation/getYakStats.sh sh
-#
 
 #  Old hacked version of compleasm.
 #
