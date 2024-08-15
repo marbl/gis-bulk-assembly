@@ -151,6 +151,12 @@ sub fetchData ($$$) {
         printf "%7s/%-9s EXISTS - %s\n", $samp, "$type:", $locf;
         next;
       }
+	  # also check for cutadapt version
+	  my $loccut = awsToLocalPath("$samp/hifi-cutadapt", $f, 1) . ".fasta.gz";
+	  if (-e $loccut ) {
+	     printf "%7s/%-9s EXISTS CUTADAPT - %s\n", $samp, "$type:", $loccut;
+		 next;
+	  }
 
       printf "%7s/%-9s FETCH  - %s\n", $samp, "$type:", $locf;
 
