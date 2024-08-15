@@ -43,6 +43,7 @@ sub createVerkkoBase ($$$$$$) {
     print CMD "\n";
     print CMD "export REF_CACHE=$ENV{'REF_CACHE'}\n";
     print CMD "\n";
+    print CMD "module load python\n";
     print CMD "module load winnowmap\n";
     print CMD "module load mashmap\n";
     print CMD "module load samtools\n";
