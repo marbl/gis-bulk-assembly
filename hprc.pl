@@ -64,7 +64,7 @@ while (scalar(@ARGV) > 0) {
       loadSamples("$root/hprc-cache/b2.tsv");
       loadSamples("$root/hprc-cache/b3.tsv");
       $rasm  = "$root/assemblies-v3";
-      $rsoft = "$root/software-v3";
+      $rsoft = "software-v3";
     }
     elsif ($v == 4) {
       loadSamples("$root/hprc-cache/b2.tsv");
@@ -72,7 +72,7 @@ while (scalar(@ARGV) > 0) {
       loadSamples("$root/hprc-cache/b5-6.tsv");
       loadSamples("$root/hprc-cache/b8.tsv");
       $rasm  = "$root/assemblies-v4";
-      $rsoft = "$root/software-v4";
+      $rsoft = "software-v4";
     }
     else {
     }
