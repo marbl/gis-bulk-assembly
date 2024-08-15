@@ -13,7 +13,7 @@ package hprc::samples;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(loadSamples numFiles dataAvailable $root $rasm %samples);
+@EXPORT = qw(loadSamples numFiles dataAvailable $root $rasm $rsoft %samples);
 
 use strict;
 use warnings "all";
@@ -21,8 +21,9 @@ no  warnings "uninitialized";
 
 #  These are also set in analyze.sh.
 
-our $root = "/data/Phillippy2/projects/hprc-assemblies";
-our $rasm = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
+our $root  = "/data/Phillippy2/projects/hprc-assemblies";
+our $rasm  = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
+our $rsoft = "/invalid/path";  # now set tin main;
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";

@@ -85,7 +85,7 @@ sub createVerkkoTrioHiC ($$$$$$$) {
     print CMD "  fi\n";
     print CMD "\n";
     print CMD "  if [ ! -e $flav/8-hicPipeline/rukki.paths.tsv ] ; then\n";
-    print CMD "    $root/software/verkko/bin/verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --slurm -d $flav --snakeopts '-U hicPhasing' \\\n";
+    print CMD "    $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav --snakeopts '-U hicPhasing' \\\n";
     print CMD "      --ovb-run 8 32 32 \\\n";
     print CMD "      --screen human \\\n";
     #rint CMD "      --rdna-scaff \\\n";   #  Verkko 2.0 needs this.
@@ -106,11 +106,14 @@ sub createVerkkoTrioHiC ($$$$$$$) {
     print CMD "    rm -f $flav/8-hicPipeline/rukki.paths.gaf && \\\n";
     print CMD "    rm -f $flav/8-hicPipeline/rukki.paths.tsv && \\\n";
     print CMD "    cat verkko-trio/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.paths.gaf | sed s/MAT/HAPLOTYPE1/g | sed s/PAT/HAPLOTYPE2/g > $flav/8-hicPipeline/rukki.paths.gaf && \\\n";
-    print CMD "    cat verkko-trio/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.paths.tsv | sed s/MAT/HAPLOTYPE1/g | sed s/PAT/HAPLOTYPE2/g > $flav/8-hicPipeline/rukki.paths.tsv\n";
+    print CMD "    cat verkko-trio/6-rukki/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip.paths.tsv | sed s/MAT/HAPLOTYPE1/g | sed s/PAT/HAPLOTYPE2/g > $flav/8-hicPipeline/rukki.paths.tsv && \\\n";
+    print CMD "    cp -p $flav/8-hicPipeline/rukki.paths.gaf $flav/8-hicPipeline/prescaf_rukki.paths.gaf && \\\n";
+    print CMD "    cp -p $flav/8-hicPipeline/rukki.paths.tsv $flav/8-hicPipeline/prescaf_rukki.paths.tsv && \\\n";
+    print CMD "    cp -p $flav/8-hicPipeline/rukki.paths.tsv $flav/assembly.paths.tsv \n";
     print CMD "  fi\n";
     print CMD "\n";
     print CMD "  if [ ! -e $flav/assembly.fasta -a -e $flav/8-hicPipeline/rukki.paths.tsv ] ; then\n";
-    print CMD "    $root/software/verkko/bin/verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
+    print CMD "    $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "      --ovb-run 8 32 32 \\\n";
     print CMD "      --screen human \\\n";
     #rint CMD "      --rdna-scaff \\\n";   #  Verkko 2.0 needs this.

@@ -49,8 +49,8 @@ my %readTypes;
 #     on options
 #       --v3
 #       --v4
-#     though software is ALWAYS 'software/', and not 'software-v3/' or
-#     'software-v4/'.
+#  All software will be unversioned and pulled from the folder named $root/software
+#      but verkko and graphaligner will be pulled from the one specified by the version below
 
 while (scalar(@ARGV) > 0) {
   my $arg = $ARGV[0];  shift @ARGV;
@@ -63,12 +63,16 @@ while (scalar(@ARGV) > 0) {
     if ($v == 3) {
       loadSamples("$root/hprc-cache/b2.tsv");
       loadSamples("$root/hprc-cache/b3.tsv");
-      $rasm = "$root/assemblies-v3";
+      $rasm  = "$root/assemblies-v3";
+      $rsoft = "$root/software-v3";
     }
     elsif ($v == 4) {
+      loadSamples("$root/hprc-cache/b2.tsv");
+      loadSamples("$root/hprc-cache/b3.tsv");
       loadSamples("$root/hprc-cache/b5-6.tsv");
       loadSamples("$root/hprc-cache/b8.tsv");
-      $rasm = "$root/assemblies-v4";
+      $rasm  = "$root/assemblies-v4";
+      $rsoft = "$root/software-v4";
     }
     else {
     }

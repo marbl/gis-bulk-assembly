@@ -56,7 +56,7 @@ sub createVerkkoBase ($$$$$$) {
     print CMD "\n";
     print CMD "if [ ! -e $flav/contigs.fasta ] ; then\n";
     print CMD "  if [ ! -e '$flav/emptyfile' ] ; then touch $flav/emptyfile ; fi\n";
-    print CMD "  $root/software/verkko/bin/verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
+    print CMD "  $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "    --snakeopts '--until untip' \\\n";
     print CMD "    --ovb-run 8 32 32 \\\n";
     print CMD "    --screen human \\\n";

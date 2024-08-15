@@ -69,7 +69,7 @@ sub createVerkkoHiC ($$$$$$$$) {
     print CMD "  if [ ! -e '$flav/5-untip' ] ;                 then  ln -s ../verkko-base/5-untip                 $flav/5-untip ;                 fi\n";
     print CMD "  if [ ! -e '$flav/hifi-corrected.fasta.gz' ] ; then  ln -s ../verkko-base/hifi-corrected.fasta.gz $flav/hifi-corrected.fasta.gz ; fi\n";
     print CMD "\n";
-    print CMD "  $root/software/verkko/bin/verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
+    print CMD "  $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "    --ovb-run 8 32 32 \\\n";
     print CMD "    --screen human \\\n";
     print CMD "    --hifi $hifi \\\n";
