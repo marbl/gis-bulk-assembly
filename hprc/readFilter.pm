@@ -92,9 +92,9 @@ sub filterHiFi ($$$$$$$) {
     close(CMD);
   }
 
-  if    (-e "$odir/$onam.fasta.gz") { print "$samp/$type - FINISHED         - $lnam\n"; }
-  elsif (-e "$odir/$onam.jid")      { print "$samp/$type - RUNNING          - $lnam\n"; }
+  if    (-e "$odir/$onam.jid")      { print "$samp/$type - RUNNING          - $lnam\n"; }
   elsif (-e "$odir/$onam.err")      { print "$samp/$type - CRASHED          - $lnam\n"; }
+  elsif (-e "$odir/$onam.fasta.gz") { print "$samp/$type - FINISHED         - $lnam\n"; }
   elsif (! -e $locf)                { print "$samp/$type - NOT-FETCHED      - $lnam\n"; }
   elsif (! $submit)                 { print "$samp/$type - READY-TO-COMPUTE - $lnam\n"; }
   else                              { print "$samp/$type - SUBMITTED        - $lnam\n"; system("sbatch $odir/$onam.sh > $odir/$onam.jid"); }
