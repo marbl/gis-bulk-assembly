@@ -34,6 +34,7 @@ sub displaySummary ($$$) {
 
   my ($HnReads, $OnReads, $TnReads, $CnReads) = ( 0, 0, 0, 0 );
   my ($HnBases, $OnBases, $TnBases, $CnBases) = ( 0, 0, 0, 0 );
+  my ($isHic12, $isHic) = (0, 0);
 
   if ($displaySummaryIndex == 0) {
     print "--------  ------- HiFi -------  -------- ONT -------  --- Child --  -------------- Trio --------------  -------- Hi-C -------\n";
@@ -68,12 +69,21 @@ sub displaySummary ($$$) {
       }
     }
 
-    if ($t eq "hifi")      { $HnReads += $nReads;  $HnBases += $nBases; }
-    if ($t eq "ont")       { $OnReads += $nReads;  $OnBases += $nBases; }
-    if ($t eq "mat-ilmn")  { $TnReads += $nReads;  $TnBases += $nBases; }
-    if ($t eq "pat-ilmn")  { $TnReads += $nReads;  $TnBases += $nBases; }
-    if ($t eq "hic1")      { $CnReads += $nReads;  $CnBases += $nBases; }
-    if ($t eq "hic2")      { $CnReads += $nReads;  $CnBases += $nBases; }
+    if ($t eq "hifi")          { $HnReads += $nReads;  $HnBases += $nBases; }
+    if ($t eq "hifi-cutadapt") { $HnReads += $nReads;  $HnBases += $nBases; }
+    if ($t eq "ont")           { $OnReads += $nReads;  $OnBases += $nBases; }
+    if ($t eq "mat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
+    if ($t eq "pat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
+    if ($t eq "hic1" || $t eq "hic2") {
+       $CnReads += $nReads;  $CnBases += $nBases;
+       print STDERR "Warning: have both hic1/2 and hic files so coverage will be inaccurate\n" if ($isHic);
+       $isHic12=1;
+    }
+    if ($t eq "hic")  {
+       $CnReads += $nReads;  $CnBases += $nBases;
+       print STDERR "Warning: have both hic1/2 and hic files so coverage will be inaccurate\n" if ($isHic12);
+       $isHic=1;
+    }
   }
 
   #  Read genomescope summary.
@@ -155,7 +165,7 @@ sub displayDetails ($$$) {
 
   #print "Type $t has ", scalar(values %files), " files.\n";
 
-  if ($type eq "hifi") {
+  if ($type eq "hifi" || $type eq "hifi-cutadapt") {
     printf "\n";
     printf "               N20 |                N50 |                N80 |               N100 | $samp\n";
     printf " min-len num-reads |  min-len num-reads |  min-len num-reads |  min-len num-reads |\n";
@@ -185,7 +195,7 @@ sub displayDetails ($$$) {
     my $name = $file;    $name =~ s/^.*--//;     #  Display name.
     $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;
 
-    if ($type eq "hifi") {
+    if ($type eq "hifi" || $type eq "hifi-cutadapt") {
       my ($len020, $idx020) = (0, 0);
       my ($len050, $idx050) = (0, 0);
       my ($len080, $idx080) = (0, 0);
@@ -241,7 +251,7 @@ sub displayDetails ($$$) {
 
   #  Print type summaries
 
-  if ($type eq "hifi") {
+  if ($type eq "hifi" || $type eq "hifi-cutadapt") {
     printf "-------- --------- | -------- --------- | -------- --------- | -------- --------- |\n";
     printf "%7.3fx %9d | %7.3fx %9d | %7.3fx %9d | %7.3fx %9d |\n",
         $hifiB020 / 3100000000, $hifiR020, $hifiB050 / 3100000000, $hifiR050, $hifiB080 / 3100000000, $hifiR080, $hifiB100 / 3100000000, $hifiR100;
