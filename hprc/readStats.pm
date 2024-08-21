@@ -40,7 +40,7 @@ sub summarizeReads ($$$) {
       if (-z $outl)   { unlink "$outl"; unlink "$outl.err"; }
 
       my $needs = (! -e $outs);
-      my $needl = (! -e $outl) && (($type eq "hifi") || ($type eq "ont"));
+      my $needl = (! -e $outl) && (($type eq "hifi") || ($type eq "ont") || ($type eq "hifi-cutadapt"));
 
       printf "%7s/%-9s - summary:%-7s readlen:%-7s - %s\n", $samp, $type, $needs ? "missing" : "ok", $needl ? "missing" : "ok", $name;
 
