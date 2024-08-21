@@ -2,9 +2,10 @@
 #
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64g
-#SBATCH --time=4-0
+#SBATCH --time=4:00:00
+#SBATCH --partition=norm,quick
 #SBATCH --output=./analysis.err
-#SBATCH --job-name=va$samp
+#SBATCH --job-name=va${1}
 #
 
 module load samtools
@@ -28,7 +29,7 @@ refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 samp=$1
 root="/data/Phillippy2/projects/hprc-assemblies"
 base=`pwd`
-base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c/base/g |sed s/trio/base/g`
+base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
 
 compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`

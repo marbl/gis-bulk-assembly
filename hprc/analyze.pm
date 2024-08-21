@@ -48,6 +48,7 @@ sub startChromosomeAssignment ($$) {
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=4\n";
+    print CMD "#SBATCH --partition=norm,quick\n";
     print CMD "#SBATCH --mem=4g\n";
     print CMD "#SBATCH --time=1:00:00\n";       #  Actually like 5 minutes
     print CMD "#SBATCH --output=./chr-assign.err\n";
@@ -126,7 +127,7 @@ sub startTelomereAnalysis ($$) {
   elsif ($unavail)                    { print "$samp/$flav/analysis   - UNAVAILABLE ($unavail)\n"; }
   elsif (! $ready)                    { print "$samp/$flav/analysis   - ASSEMBLY-NOT-READY\n"; }
   elsif (! $$opts{"submit"})          { print "$samp/$flav/analysis   - READY-TO-COMPUTE\n"; }
-  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -D $diro $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
+  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -J va$samp -D $diro $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
 }
 
 1;
