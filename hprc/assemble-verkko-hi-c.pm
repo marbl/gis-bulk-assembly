@@ -80,7 +80,7 @@ sub createVerkkoHiC ($$$$$$$$) {
     print CMD "  tar -C $flav                             -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz                                 && rm -rf $flav/.snakemake && \\\n";
     print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - .snakemake    | gzip -9 > $flav/8-hicPipeline/final_contigs/snakemake.tar.gz     && rm -rf $flav/8-hicPipeline/final_contigs.snakemake && \\\n";
     print CMD "  tar -C $flav                             -cf - batch-scripts | gzip -9 > $flav/batch-scripts.tar.gz                             && rm -rf $flav/batch-scripts && \\\n";
-    print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - batch-scripts | gzip -9 > $flav/8-hicPipeline/final_contigs/batch-scripts.tar.gz && rm -rf $flav/8-hicPipeline/final_contigsbatch-scripts\n";
+    print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - batch-scripts | gzip -9 > $flav/8-hicPipeline/final_contigs/batch-scripts.tar.gz && rm -rf $flav/8-hicPipeline/final_contigs/batch-scripts\n";
     print CMD "fi\n";
     print CMD "\n";
     print CMD "rm -f $sdir/$flav.jid\n";
