@@ -29,7 +29,7 @@ refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 samp=$1
 root="/data/Phillippy2/projects/hprc-assemblies"
 base=`pwd`
-base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
+base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c-test/base/g | sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
 
 compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`
