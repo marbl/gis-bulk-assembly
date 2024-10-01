@@ -84,8 +84,8 @@ sub createVerkkoTrio ($$$$$$) {
     print CMD "    --screen human \\\n";
     print CMD "    --hifi $hifi \\\n";
     print CMD "    --nano $nano \\\n";
-    print CMD "    --hap-kmers $mati \\\n";
-    print CMD "                $pati \\\n";
+    print CMD "    --hap-kmers $pati \\\n";
+    print CMD "                $mati \\\n";
     print CMD "                trio \\\n";
     print CMD "  && \\\n";
     print CMD "  tar -C $flav -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz     && rm -rf $flav/.snakemake && \\\n";
