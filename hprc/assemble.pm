@@ -35,6 +35,17 @@ require "hprc/assemble-verkko-thic.pm";
 require "hprc/assemble-cleanup.pm";
 require "hprc/assemble-archive.pm";
 
+sub getScreenOption($) {
+   my $verkko = shift @_;
+   my $isNewScreen = `$verkko/bin/verkko --help |grep -c screen-human`;
+   print "Running with verkko $verkko and screen is $isNewScreen\n";
+
+   if ($isNewScreen != 0) {
+      return "--screen-human-contaminants";
+   } else {
+      return "--screen human";
+   }
+}
 
 sub submitIf ($$$$$$$$) {
   my $samp    = shift @_;
