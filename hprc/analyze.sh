@@ -279,8 +279,8 @@ if [ ! -e assembly.refOriented.fasta ]; then
 
    java -cp /data/korens/devel/utils:. SubFasta  assembly-ref.reorient.tsv ../assembly.fasta >  assembly.refOriented.fasta
    for i in `seq 1 2`; do
-      parent=`echo $i |awk '{if ($1 == 1) print "mat"; else print "pat"}'`
-      # we have XY then we use the assignment information to make sure chrX is is haplotype 1 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
+      parent=`echo $i |awk '{if ($1 == 2) print "mat"; else print "pat"}'`
+      # we have XY then we use the assignment information to make sure chrX is is haplotype 2 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
       if [ $isXY -ne 0 ]; then
          if [ $parent = "mat" ]; then
            cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
