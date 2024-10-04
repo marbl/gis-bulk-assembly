@@ -164,8 +164,8 @@ fi
 
 
 if grep -q mat- ../assembly.fasta ; then
-    label1="mat-"
-    label2="pat-"
+    label1="pat-"
+    label2="mat-"
 elif grep -q h1tg ../assembly.fasta ; then
     label1="h1tg"
     label2="h2tg"
