@@ -115,7 +115,7 @@ sub createVerkkoTrioHiC ($$$$$$$) {
     print CMD "  if [ ! -e $flav/assembly.fasta -a -e $flav/8-hicPipeline/rukki.paths.tsv ] ; then\n";
     print CMD "    $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "      --ovb-run 8 32 32 \\\n";
-    print CMD "      --screen human \\\n";
+    print CMD "    " . getScreenOption("$root/$rsoft/verkko") . " \\\n";
     #rint CMD "      --rdna-scaff \\\n";   #  Verkko 2.0 needs this.
     print CMD "      --hifi $hifi \\\n";
     print CMD "      --nano $nano \\\n";
