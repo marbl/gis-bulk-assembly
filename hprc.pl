@@ -69,8 +69,15 @@ while (scalar(@ARGV) > 0) {
     elsif ($v == 4) {
       loadSamples("$root/hprc-cache/b2.tsv");
       loadSamples("$root/hprc-cache/b3.tsv");
-      loadSamples("$root/hprc-cache/b5-6.tsv");
       loadSamples("$root/hprc-cache/b8.tsv");
+      loadSamples("$root/hprc-cache/b1.tsv");
+      loadSamples("$root/hprc-cache/b5.tsv");
+      loadSamples("$root/hprc-cache/b6.tsv");
+      loadSamples("$root/hprc-cache/b7.tsv");
+      loadSamples("$root/hprc-cache/b9.tsv");
+      loadSamples("$root/hprc-cache/b10.tsv");
+      loadSamples("$root/hprc-cache/b11.tsv");
+     # loadSamples("$root/hprc-cache/yr4_30hr.tsv");
       $rasm  = "$root/assemblies-v4";
       $rsoft = "software-v4";
     }
@@ -247,7 +254,7 @@ if (($mode ne "help") &&
     ($mode ne "genomescope") &&
     ($mode ne "hapmers") &&
     ($mode ne "yakmers") &&
-	($mode ne "ribotin") &&
+    ($mode ne "ribotin") &&
     ($mode ne "assemble") &&
     ($mode ne "analyze")) {
   push @errs, "Invalid mode '$mode'.";
