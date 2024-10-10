@@ -207,12 +207,12 @@ sub getFileMap ($$@) {
   my $subd;
 
   if      ($type eq "hic1") {       #  If asked for a specific Hi-C end, make
-    $hics = "_R1_001.fastq.gz";     #  two extensions, one that we want to SAVE,
-    $hici = "_R2_001.fastq.gz";     #  one that we want to INGORE.  We'll flag
+    $hics = "_R1_001.*fastq.gz";     #  two extensions, one that we want to SAVE,
+    $hici = "_R2_001.*fastq.gz";     #  one that we want to INGORE.  We'll flag
     $type = "hic";                  #  anything not in either of those as 'missing',
   } elsif ($type eq "hic2") {       #
-    $hics = "_R2_001.fastq.gz";     #  Also use 'hic' as the original type for
-    $hici = "_R1_001.fastq.gz";     #  file discovery.
+    $hics = "_R2_001.*fastq.gz";     #  Also use 'hic' as the original type for
+    $hici = "_R1_001.*fastq.gz";     #  file discovery.
     $type = "hic";
   }
 
