@@ -25,6 +25,7 @@ cpus=$SLURM_CPUS_PER_TASK
 
 refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
 refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
+marbl_utils="/data/korens/devel/marbl_utils"
 
 samp=$1
 root="/data/Phillippy2/projects/hprc-assemblies"
@@ -49,24 +50,7 @@ if [ ! -e ../assembly.fasta.fai ]; then
     samtools faidx ../assembly.fasta
 fi
 
-#  Find telomeres
-if [ ! -e telomere.bed ] ; then
-    echo "Find telomere.bed."
-    seqtk telo -d 50000 ../assembly.fasta > telomere.tmp
-    # also trim off the start/end of the sequence and find telomere again because seqtk sometimes misses telomere in these cases
-    seqtk trimfq -b 2000 -e 2000 ../assembly.fasta > tmp.fa
-    seqtk telo -d 50000 tmp.fa >> telomere.tmp
-    seqtk trimfq -b 4000 -e 4000 ../assembly.fasta > tmp.fa
-    seqtk telo -d 50000 tmp.fa >> telomere.tmp
-    cat telomere.tmp | bedtools sort | bedtools merge -c 4 -o max > telomere.bed
-    rm -f ./telomere.tmp ./tmp.fa
-fi
-
-#  Find gaps
-if [ ! -e assembly.gaps ] ; then
-    echo "Find gaps."
-    seqtk gap ../assembly.fasta > assembly.gaps
-fi
+sh $marbl_utils/asm_evaluation/getT2T.sh ../assembly.fasta
 
 # remove rDNA and add telomere nodes
 if [ ! -e assembly.homopolymer-compressed.add_telo.noseq.gfa ]; then
@@ -74,69 +58,9 @@ if [ ! -e assembly.homopolymer-compressed.add_telo.noseq.gfa ]; then
    repeatUnit="/data/Phillippy/references/hg38/rDNA_compressed.fasta"
    cat ../assembly.homopolymer-compressed.gfa |awk '{if (match($1, "^S")) { print ">"$2; print $3}}' | mash sketch -i - -o sketch.msh
    mash screen sketch.msh $repeatUnit | awk '{if ($1 > 0.9 && $4 < 0.05) print $NF}' > rdna.nodes
-   python /data/korens/devel/verkko-tip/lib/verkko/scripts/remove_nodes_add_telomere.py -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
-   python /data/korens/devel/verkko-tip/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
    rm -f ./assembly.colors.csv
-fi
-
-#
-#  This is getComplete.sh
-#    /data/Phillippy/projects/verkko/julian/HG02809/asm_trio/getComplete.sh
-#
-
-# get list of nodes with gaps
-awk < assembly.gaps '{ print $1 }' | sort | uniq > nodes-with-gaps
-
-# exclude those nodes from the full list of scaffolds in the asm
-java -cp /data/korens/devel/utils SubFile nodes-with-gaps ../assembly.fasta.fai 0 -1 true | awk '{print $1}' > tmp2
-
-# get list of things with >1 telomere
-awk '{print $1}' < telomere.bed \
-    | sort \
-    | uniq -c \
-    | awk '{if ($1 > 1) print $NF}' > tmp
-
-# get list of nodes w/>1 telomere and no gaps
-java -cp /data/korens/devel/utils SubFile tmp tmp2 > tmp3
-
-# keep only those that have two telomeres near the ends
-grep -w -f tmp telomere.bed | awk '{print $1}' > tmp4
-
-grep -w -f tmp4 ../assembly.fasta.fai  \
-    | awk '{print $1"\t"$2}'  \
-    | sort -sk1,1 > tmp5
-
-grep -w -f tmp telomere.bed  \
-    | sort -sk1,1 > tmp4
-
-join tmp4 tmp5  \
-    | awk -v PREV="" '{if ($1 != PREV) { if (PREV != "" && C >=1 && E >=1 ) print PREV; PREV=$1; C=0; E=0 } if ($2 < 51000) C++; if ($3 + 51000 > $NF && $NF > 50000) { E++; } } END { if (C >=1 && E >= 1) print PREV}' > t2t_scfs
-
-grep -w -f tmp3 telomere.bed | awk '{print $1}' > tmp4
-
-grep -w -f tmp4 ../assembly.fasta.fai  \
-    | awk '{print $1"\t"$2}'  \
-    | sort -sk1,1 > tmp5
-
-grep -w -f tmp3 telomere.bed| sort -sk1,1 > tmp4
-
-join tmp4 tmp5  \
-    | awk -v PREV="" '{if ($1 != PREV) { if (PREV != "" && C >=1 && E >=1 ) print PREV; PREV=$1; C=0; E=0 } if ($2 < 51000) C++; if ($3 + 51000 > $NF && $NF > 50000 ) { E++; } } END { if (C >=1 && E >= 1) print PREV}' > t2t_ctgs
-
-echo ""
-if [ -s t2t_ctgs ] ; then
-    echo Ungapped two telomere: $( cat t2t_ctgs | wc -l )
-    grep -w -f t2t_ctgs telomere.bed
-else
-    echo Ungapped two telomere: NONE
-fi
-
-echo ""
-if [ -s t2t_scfs ] ; then
-    echo Gapped two telomere: $( cat t2t_scfs | wc -l )
-    grep -w -f t2t_scfs telomere.bed
-else
-    echo Gapped two telomere: NONE
 fi
 
 #
@@ -272,7 +196,7 @@ if [ $isXY -ne 0 ]; then
 fi
 
 if [ ! -e assembly.refOriented.fasta ]; then
-   sh /data/korens/devel/marbl_utils/verkko_helpers/reorientByRef.sh assembly-ref.norm.mashmap > assembly-ref.reorient.tsv
+   sh $marbl_utils/verkko_helpers/reorientByRef.sh assembly-ref.norm.mashmap > assembly-ref.reorient.tsv
    cat assembly-ref.reorient.tsv |awk '{print $1}' > tmp
    grep -w -v -f tmp ../assembly.fasta.fai |awk '{print $1"\t0\t"$2}' >>  assembly-ref.reorient.tsv
    rm ./tmp
