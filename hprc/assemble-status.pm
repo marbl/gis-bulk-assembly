@@ -102,7 +102,7 @@ sub isFinished ($$) {
   elsif (($flav eq "verkko-trio") ||
          ($flav eq "verkko-hi-c") ||
          ($flav eq "verkko-thic")) {
-    $fini = 1   if (-e "$dirn/$flav/assembly.fasta");
+    $fini = 1   if (-e "$dirn/$flav/assembly.fasta") || (-e "$dirn/$flav/assembly.fasta.gz");
   }
 
   return $fini;

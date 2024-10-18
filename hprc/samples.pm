@@ -38,6 +38,7 @@ sub extractItems ($) {
 
   return undef   if ($orig eq "na");
   return undef   if ($orig eq "NA");
+  return undef   if ($orig eq "");
   return $orig   if ($orig !~ m/^\s*\[/);
 
   $orig =~ s/^\s*\[\s*//;
