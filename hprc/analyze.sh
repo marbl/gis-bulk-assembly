@@ -58,8 +58,8 @@ if [ ! -e assembly.homopolymer-compressed.add_telo.noseq.gfa ]; then
    repeatUnit="/data/Phillippy/references/hg38/rDNA_compressed.fasta"
    cat ../assembly.homopolymer-compressed.gfa |awk '{if (match($1, "^S")) { print ">"$2; print $3}}' | mash sketch -i - -o sketch.msh
    mash screen sketch.msh $repeatUnit | awk '{if ($1 > 0.9 && $4 < 0.05) print $NF}' > rdna.nodes
-   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
-   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
    rm -f ./assembly.colors.csv
 fi
 
