@@ -44,7 +44,7 @@ sub summarizeReads ($$$) {
 
       printf "%7s/%-9s - summary:%-7s readlen:%-7s - %s\n", $samp, $type, $needs ? "missing" : "ok", $needl ? "missing" : "ok", $name;
 
-      $needCompute = $needs || $needl;
+      $needCompute |= $needs || $needl;
     }
 
     if ($needCompute) {
