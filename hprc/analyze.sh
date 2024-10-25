@@ -207,12 +207,12 @@ if [ ! -e assembly.refOriented.fasta ]; then
       # we have XY then we use the assignment information to make sure chrX is is haplotype 2 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
       if [ $isXY -ne 0 ]; then
          if [ $parent = "mat" ]; then
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > include.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > include.tmp
            grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
          elif [ $parent = "pat" ]; then
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > ignore.tmp
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > include.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > include.tmp
            grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
          fi
 	  else
