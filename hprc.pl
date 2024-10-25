@@ -68,6 +68,7 @@ while (scalar(@ARGV) > 0) {
     }
     elsif ($v == 4) {
       loadSamples("$root/hprc-cache/b2.tsv");
+      loadSamples("$root/hprc-cache//b2-moved.tsv");
       loadSamples("$root/hprc-cache/b3.tsv");
       loadSamples("$root/hprc-cache/b8.tsv");
       loadSamples("$root/hprc-cache/b1.tsv");
