@@ -224,7 +224,7 @@ if [ ! -e assembly.refOriented.fasta ]; then
       grep "_homozygous" assembly-ref.reorient.tsv >> tmp || true
       grep -v chr  assembly-ref.reorient.tsv |grep "$parent" >> tmp || true
       grep -v chr  assembly-ref.reorient.tsv |grep "haplotype$i" >> tmp || true
-      cat tmp | sort |uniq | grep -w -v -f ignore.tmp > tmp2
+      cat tmp | sort |uniq | grep -w -v -f ignore.tmp > tmp2 || true
       java -cp /data/korens/devel/utils:. SubFasta tmp2 ../assembly.fasta > assembly.refOriented.haplotype$i.fasta
 
       rm -f ./tmp? ./ignore.tmp ./include.tmp
@@ -281,7 +281,7 @@ for asm in assembly assembly.haplotype1 assembly.haplotype2 ; do
     else
         touch $asm.yak.qv.NO_ILMN_DATA
     fi
-    if [ ! -e $asm.yak.trioeavl -a -e $root/hprc-data/$samp/yakmers/mati.yak -a -e $root/hprc-data/$samp/yakmers/pati.yak ] ; then
+    if [ ! -e $asm.yak.trioeval -a -e $root/hprc-data/$samp/yakmers/mati.yak -a -e $root/hprc-data/$samp/yakmers/pati.yak ] ; then
         yak trioeval -t $cpus           $root/hprc-data/$samp/yakmers/mati.yak \
                                         $root/hprc-data/$samp/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
     else
