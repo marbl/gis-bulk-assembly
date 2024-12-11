@@ -38,6 +38,10 @@ sub awsToLocalPath ($$@) {
 
   $locf =~ s!/!--!g;
   $locf =~ s!^s3:----human-pangenomics--\w+--!hprc-data/$samp/!;
+  # for s3 paths not from human-pangenomics bucket
+  $locf =~ s!^s3:----!hprc-data/$samp/!;
+  # for ftp links from sra.ebi.ac.uk
+  $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-data/$samp/!;
   $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//  if ($strip);
 
   return("$root/$locf");
@@ -49,6 +53,10 @@ sub awsToLocalInfo ($$) {
 
   $info =~ s!/!--!g;
   $info =~ s!^s3:----human-pangenomics--\w+--!hprc-cache/aws/$samp/!;
+  # for s3 paths not from human-pangenomics bucket
+  $info =~ s!^s3:----!hprc-cache/aws/$samp/!;
+  # for ftp links from sra.ebi.ac.uk
+  $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!/aws/$samp/!;
   $info .= ".s3ls";
 
   return($info);
@@ -151,12 +159,12 @@ sub fetchData ($$$) {
         printf "%7s/%-9s EXISTS - %s\n", $samp, "$type:", $locf;
         next;
       }
-	  # also check for cutadapt version
-	  my $loccut = awsToLocalPath("$samp/hifi-cutadapt", $f, 1) . ".fasta.gz";
-	  if (-e $loccut ) {
-	     printf "%7s/%-9s EXISTS CUTADAPT - %s\n", $samp, "$type:", $loccut;
-		 next;
-	  }
+     # also check for cutadapt version
+     my $loccut = awsToLocalPath("$samp/hifi-cutadapt", $f, 1) . ".fasta.gz";
+     if (-e $loccut ) {
+        printf "%7s/%-9s EXISTS CUTADAPT - %s\n", $samp, "$type:", $loccut;
+       next;
+     }
 
       printf "%7s/%-9s FETCH  - %s\n", $samp, "$type:", $locf;
 
@@ -166,12 +174,21 @@ sub fetchData ($$$) {
 
       #y $c = "aws --no-sign-request s3api get-object --bucket human-pangenomics --key '$awso' --range bytes=0-1048576 '$locf' > $locf.err 2>&1";
       #y $c = "seqrequester generate -min 1000 -max 10000 -sequences 100 -gaussian | gzip -1c > '$locf'";
-      my $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+      #my $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+      my $c;
+      if ($awsf =~ /^s3/) {
+        $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+      } else {
+        $c = "curl --silent -o '$locf' '$awsf' > $locf.err 2>&1";
+      }
       my $r = system($c);
+      #print "$c\n";
 
       if ($r == 0) {                             #  If no error, remove the logging
         unlink "$locf.err";                      #  and continue on to the next file.
         next;
+      } else {
+        print "Download failed with return code $r\n";
       }
 
       rename '$locf',     '$locf.FAILED';        #  If an error, save the failed file and logging,

@@ -271,7 +271,11 @@ if (scalar(keys %samples) == 0) {
 
 if (($mode eq "help") || (scalar(@errs) > 0)) {
   print "usage: $0 mode [options]";
-  print "  <see the docs>\n";
+  if ($mode eq "help") {
+     open my $fh, '<', "$root/hprc.txt" or die "Cannot open file '$root/hprc.txt': $!";
+     print while <$fh>;
+     close $fh;
+  }
   print "\n";
   print "ERROR: $_\n"  foreach (@errs);
   exit(1);

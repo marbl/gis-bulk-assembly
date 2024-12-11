@@ -96,6 +96,9 @@ elif grep -q h1tg ../assembly.fasta ; then
 elif grep -q contig- ../assembly.fasta ; then
     label1="contig-"
     label2="none-ignore"
+elif grep -q "#1#" ../assembly.fasta ; then
+   label1="#1#"
+   label2="#2#"
 else
     label1="haplotype1-"
     label2="haplotype2-"
