@@ -123,7 +123,7 @@ while (scalar(@ARGV) > 0) {
 
 
   #  HELP          (no options, though --samples is accepted)
-  #  LIST          --samples ...  --files --summary --details --read-type     #  displays list of samples by defailt
+  #  LIST          --samples ...  --sizes [--files [--s3-paths]] --summary --details --read-type     #  displays list of samples by default
   #  STATUS        --samples ...
   #  FETCH         --samples ...
   #  READ-STATS    --samples ...  --submit              --read-type hifi|ont
@@ -138,7 +138,8 @@ while (scalar(@ARGV) > 0) {
 
   #lsif (($mode eq "list") && ())                       {                        }   #  default is to show a list of sample names
   elsif (($mode eq "list") && ($arg eq "--sizes"))      { $opts{"sizes"}    = 1; }   #  total size of aws/downloaded files for each sample
-  elsif (($mode eq "list") && ($arg eq "--files"))      { $opts{"files"}    = 1; }   #  same, but also show each file
+  elsif (($mode eq "list") && ($arg eq "--files"))      { $opts{"files"}    = 1; }   #  same, but also show each file (must still supply --sizes)
+  elsif (($mode eq "list") && ($arg eq "--s3-paths"))   { $opts{"s3-paths"} = 1; }   #  same, but show the aws s3 path instead of the local path (must still supply --files)
   elsif (($mode eq "list") && ($arg eq "--summary"))    { $opts{"summary"}  = 1; }   #  total coverage per type and heterozygosity from genomescope
   elsif (($mode eq "list") && ($arg eq "--details"))    { $opts{"details"}  = 1; }   #  coverage per file
 

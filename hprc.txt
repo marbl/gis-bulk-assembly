@@ -72,10 +72,12 @@ Shows available samples, downloaded data, and computed read statistics.
 [no-options]
   With no options, it prints the list of known samples.
 
---sizes [--files]
+--sizes [--files [--s3-paths]]
   Displays a table of file sizes on AWS and the local file system.
   When --files is also supplied, expands the table to show individual
-  files and their local file system location.
+  files and their local file system location. When --s3-paths is also
+  supplied, show the location of the files on aws s3 instead of on the
+  local file system.
 
 --summary
   Displays, for each data type, coverage and genomescope heterozygosity.

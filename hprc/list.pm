@@ -325,7 +325,8 @@ sub displayFiles ($$$$) {
       my $l = getLocalSize($samp, $locf);
       my $z = ($l != $r) ? "!" : " ";
 
-      printf("%7s/%-15s  %6.1f %s %6.1f  %s\n", $samp, $type, $r, $z, $l, $locf);
+      my $fn = exists($$opts{"s3-paths"}) ? $awsf : $locf;
+      printf("%7s/%-15s  %6.1f %s %6.1f  %s\n", $samp, $type, $r, $z, $l, $fn);
     }
     printf("%7s/%-15s  %6.1f   %6.1f\n", $samp, $type, $awss, $locs);
   }
