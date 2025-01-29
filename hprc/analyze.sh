@@ -28,7 +28,11 @@ refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
 marbl_utils="/data/korens/devel/marbl_utils"
 
 samp=$1
-root="/data/Phillippy2/projects/hprc-assemblies"
+if [ -n "$HPRC_ROOT" ]; then
+   root=$HPRC_ROOT
+else
+   root="/data/Phillippy2/projects/hprc-assemblies"
+fi
 base=`pwd`
 base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c-test/base/g | sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
 

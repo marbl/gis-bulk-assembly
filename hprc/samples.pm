@@ -11,6 +11,7 @@
 
 package hprc::samples;
 require Exporter;
+use Cwd 'abs_path';
 
 @ISA    = qw(Exporter);
 @EXPORT = qw(loadSamples numFiles dataAvailable $root $rasm $rsoft %samples);
@@ -21,12 +22,13 @@ no  warnings "uninitialized";
 
 #  These are also set in analyze.sh.
 
-our $root  = "/data/Phillippy2/projects/hprc-assemblies";
+our $root  = abs_path('.');    #"/data/Phillippy2/projects/hprc-assemblies";
 our $rasm  = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
 our $rsoft = "/invalid/path";  # now set tin main;
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
+$ENV{'HPRC_ROOT'} = "$root";
 
 #
 #  Extract the values from within brackets: "[ A,B,C,D ]"
