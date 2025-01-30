@@ -69,7 +69,7 @@ sub awsToLocalName ($$@) {
 
   $name =~ s!/!--!g;    #  Replace /'s by --'s.
   $name =~ s!^.*--!!;   #  Delete everything up to the LAST --.
-  $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//  if ($strip);
+  $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
 
   return($name);
 }
