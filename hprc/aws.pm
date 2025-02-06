@@ -56,7 +56,7 @@ sub awsToLocalInfo ($$) {
   # for s3 paths not from human-pangenomics bucket
   $info =~ s!^s3:----!hprc-cache/aws/$samp/!;
   # for ftp links from sra.ebi.ac.uk
-  $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!/aws/$samp/!;
+  $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-cache/aws/$samp/!;
   $info .= ".s3ls";
 
   return($info);
@@ -93,7 +93,24 @@ sub fetchInfo ($$) {
       die "aws failed to run; probably need 'module load aws'.\n";
     }
     system("mkdir -p hprc-cache/aws/$samp")    if (! -d "hprc-cache/aws/$samp");
-    system("aws --no-sign-request s3 ls $file > $info 2> $info.err");
+    if ($file =~ /^s3/) {
+      system("aws --no-sign-request s3 ls $file > $info 2> $info.err");
+    } elsif ($file =~ /^ftp/) {
+      my $curl_output=`curl -I $file 2> $info.err`;
+      # Parse the curl output for Last-Modified and Content-Length
+      open my $o, ">", $info;
+      my ($last_modified) = $curl_output =~ /Last-Modified:\s*(.*?)\s*\r?\n/;
+      my ($size) = $curl_output =~ /Content-Length:\s*(\d+)\s*\r?\n/;
+
+      # report failure if we can't get info, otherwise format it nicely
+      #die "Couldn't get file info for $file, check $info.err " if (! $last_modified);
+      my $formatted_date = `date -d "$last_modified" "+%Y-%m-%d %H:%M:%S"`;
+      chomp($formatted_date);
+      print $o "$formatted_date\t$size\t$file\n";
+      close $o;
+    } else {
+       die "Unknown file type $file\n"
+    }
   }
 
   die "didn't find '$info'\n"   if (! -e "$info");
@@ -178,8 +195,11 @@ sub fetchData ($$$) {
       my $c;
       if ($awsf =~ /^s3/) {
         $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+      } elsif ($awsf =~ /^ftp/) {
+        $c = "curl -f -o '$locf' '$awsf' > $locf.err 2>&1";
       } else {
-        $c = "curl --silent -o '$locf' '$awsf' > $locf.err 2>&1";
+        print "Download requested unknown file type $awsf\n";
+        exit(1);
       }
       my $r = system($c);
       #print "$c\n";
