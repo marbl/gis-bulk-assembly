@@ -52,10 +52,10 @@ sub displaySummary ($$$) {
     my $nBases = 0;
 
     foreach my $file (values %files) {
-      my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.summary/;
-      my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.readlen/;
+      my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.summary/;
+      my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.readlen/;
       my $name = $file;    $name =~ s/^.*--//;     #  Display name.
-      $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;
+      $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;
 
       if (-e "$outs") {
         open(SUM, "< $outs") or die "Failed to open '$outs': $!\n";
@@ -190,10 +190,10 @@ sub displayDetails ($$$) {
   my ($ontR000,  $ontB000)  = (0, 0);
 
   foreach my $file (values %files) {
-    my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.summary/;
-    my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.readlen/;
+    my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.summary/;
+    my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.readlen/;
     my $name = $file;    $name =~ s/^.*--//;     #  Display name.
-    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;
+    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;
 
     if ($type eq "hifi" || $type eq "hifi-cutadapt") {
       my ($len020, $idx020) = (0, 0);

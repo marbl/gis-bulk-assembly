@@ -115,11 +115,11 @@ sub filterReads ($$$) {
       my $bnam = basename($locf);  #  Name of input file.
       my $lnam = basename($locf);  #  Name for logging.
 
-      $bnam =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;   #  Strip extensions from base name.
+      $bnam =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;   #  Strip extensions from base name.
 
       $lnam =~ s!/!--!;                                  #  Change actual components to virtual,
       $lnam =~ s!^.*--!!;                                #  then erase all but the last component,
-      $lnam =~ s!.(fasta.gz|fastq.gz|sam|bam|cram)$!!;   #  and finally erase the extension.
+      $lnam =~ s!.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$!!;   #  and finally erase the extension.
 
       if ($type eq 'hifi')     { filterHiFi($samp, $type, $locf, $idir, $bnam, $lnam, $submit); }
       if ($type eq 'ont')      {}

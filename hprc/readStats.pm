@@ -32,9 +32,9 @@ sub summarizeReads ($$$) {
     my $needCompute = 0;
 
     foreach my $file (values %files) {
-      my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.summary/;
-      my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.readlen/;
-      my $name = $file;    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;  $name =~ s!/!--!;  $name =~ s!^.*--!!;
+      my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.summary/;
+      my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.readlen/;
+      my $name = $file;    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;  $name =~ s!/!--!;  $name =~ s!^.*--!!;
 
       if (-z $outs)   { unlink "$outs"; unlink "$outs.err"; }
       if (-z $outl)   { unlink "$outl"; unlink "$outl.err"; }
@@ -55,9 +55,9 @@ sub summarizeReads ($$$) {
       }
 
       foreach my $file (values %files) {
-        my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.summary/;
-        my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$/.readlen/;
-        my $name = $file;    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//;  $name =~ s!/!--!;  $name =~ s!^.*--!!;
+        my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.summary/;
+        my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.readlen/;
+        my $name = $file;    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;  $name =~ s!/!--!;  $name =~ s!^.*--!!;
 
         my $cmds = "$root/software/seqrequester/build/bin/seqrequester summarize         '$file' > '$outs.tmp' 2> '$outs.err' && mv '$outs.tmp' '$outs'";
         my $cmdl = "$root/software/seqrequester/build/bin/seqrequester summarize -seqlen '$file' > '$outl.tmp' 2> '$outl.err' && mv '$outl.tmp' '$outl'";

@@ -42,7 +42,7 @@ sub awsToLocalPath ($$@) {
   $locf =~ s!^s3:----!hprc-data/$samp/!;
   # for ftp links from sra.ebi.ac.uk
   $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-data/$samp/!;
-  $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram)$//  if ($strip);
+  $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
 
   return("$root/$locf");
 }
