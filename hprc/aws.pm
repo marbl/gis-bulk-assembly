@@ -224,12 +224,12 @@ sub getFileMap ($$@) {
   my $subd;
 
   if      ($type eq "hic1") {       #  If asked for a specific Hi-C end, make
-    $hics = "_R1_001.*fastq.gz";     #  two extensions, one that we want to SAVE,
-    $hici = "_R2_001.*fastq.gz";     #  one that we want to INGORE.  We'll flag
+    $hics = qr/_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  two extensions, one that we want to SAVE,
+    $hici = qr/_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  one that we want to INGORE.  We'll flag
     $type = "hic";                  #  anything not in either of those as 'missing',
   } elsif ($type eq "hic2") {       #
-    $hics = "_R2_001.*fastq.gz";     #  Also use 'hic' as the original type for
-    $hici = "_R1_001.*fastq.gz";     #  file discovery.
+    $hics = qr/_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  Also use 'hic' as the original type for
+    $hici = qr/_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  file discovery.
     $type = "hic";
   }
 
@@ -249,8 +249,8 @@ sub getFileMap ($$@) {
     #  care about and present/missing or if it is one we don't care about.
 
     if (defined($hics)) {
-      if    ($locn =~ m/$hici$/)  { next;                                  }
-      elsif ($locn !~ m/$hics$/)  { die "Confused by hic name in $locn\n"; }
+      if    ($locn =~ $hici)  { next;                                  }
+      elsif ($locn !~ $hics)  { die "Confused by hic name in $locn\n"; }
     }
 
     #  If a subdirectory is specified, insert it in the path AND use whatever
