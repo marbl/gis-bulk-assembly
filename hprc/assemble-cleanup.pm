@@ -109,6 +109,34 @@ sub cleanupAssembly ($$) {
       if (-e "$dirn/$d/packages")                 { system("cd $dirn/$d && tar -cf packages-logs.tar packages && rm -rf packages"); }
     }
 
+    #  zip large gfa outputs
+    if (-e "$dirn/2-processGraph/combined-edges-uniques.gfa")       { system("pigz $dirn/2-processGraph/combined-edges-uniques.gfa"); }
+    if (-e "$dirn/2-processGraph/fixed-hifi-resolved.gfa")  { system("pigz $dirn/2-processGraph/fixed-hifi-resolved.gfa"); }
+    if (-e "$dirn/2-processGraph/gapped-hifi-resolved.gfa") { system("pigz $dirn/2-processGraph/gapped-hifi-resolved.gfa"); }
+    if (-e "$dirn/2-processGraph/gapped-once-hifi-resolved.gfa")    { system("pigz $dirn/2-processGraph/gapped-once-hifi-resolved.gfa"); }
+    if (-e "$dirn/2-processGraph/gapped-twice-hifi-resolved.gfa")   { system("pigz $dirn/2-processGraph/gapped-twice-hifi-resolved.gfa"); }
+    if (-e "$dirn/2-processGraph/unrolled-hifi-resolved.gfa")       { system("pigz $dirn/2-processGraph/unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/chopped-unitig-unrolled-hifi-resolved.gfa")  { system("pigz $dirn/4-processONT/chopped-unitig-unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/combined-edges-uniques.gfa")                 { system("pigz $dirn/4-processONT/combined-edges-uniques.gfa"); }
+    if (-e "$dirn/4-processONT/connected.gfa")                              { system("pigz $dirn/4-processONT/connected.gfa"); }
+    if (-e "$dirn/4-processONT/gapped-graphaln.gfa")                        { system("pigz $dirn/4-processONT/gapped-graphaln.gfa"); }
+    if (-e "$dirn/4-processONT/gapped-once-unitig-unrolled-hifi-resolved.gfa")      { system("pigz $dirn/4-processONT/gapped-once-unitig-unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/gapped-thrice-unitig-unrolled-hifi-resolved.gfa")    { system("pigz $dirn/4-processONT/gapped-thrice-unitig-unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/gapped-twice-unitig-unrolled-hifi-resolved.gfa")     { system("pigz $dirn/4-processONT/gapped-twice-unitig-unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/gapped-unitig-unrolled-hifi-resolved.gfa")   { system("pigz $dirn/4-processONT/gapped-unitig-unrolled-hifi-resolved.gfa"); }
+    if (-e "$dirn/4-processONT/normal-connected.gfa")       { system("pigz $dirn/4-processONT/normal-connected.gfa"); }
+    if (-e "$dirn/4-processONT/ont-resolved-graph.gfa")     { system("pigz $dirn/4-processONT/ont-resolved-graph.gfa"); }
+    if (-e "$dirn/4-processONT/unrolled-ont-resolved.gfa")  { system("pigz $dirn/4-processONT/unrolled-ont-resolved.gfa"); }
+    if (-e "$dirn/5-untip/combined-edges-1.gfa")            { system("pigz $dirn/5-untip/combined-edges-1.gfa"); }
+    if (-e "$dirn/5-untip/combined-edges-final.gfa")        { system("pigz $dirn/5-untip/combined-edges-final.gfa"); }
+    if (-e "$dirn/5-untip/connected-tip.gfa")               { system("pigz $dirn/5-untip/connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/popped-connected-tip.gfa")        { system("pigz $dirn/5-untip/popped-connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/popped-unitig-unrolled-popped-connected-tip.gfa") { system("pigz $dirn/5-untip/popped-unitig-unrolled-popped-connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/unitig-connected-tip.gfa")        { system("pigz $dirn/5-untip/unitig-connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/unitig-unrolled-popped-connected-tip.gfa")        { system("pigz $dirn/5-untip/unitig-unrolled-popped-connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/unrolled-popped-connected-tip.gfa")       { system("pigz $dirn/5-untip/unrolled-popped-connected-tip.gfa"); }
+    if (-e "$dirn/5-untip/unrolled-popped-unitig-unrolled-popped-connected-tip.gfa")        { system("pigz $dirn/5-untip/unrolled-popped-unitig-unrolled-popped-connected-tip.gfa"); }
+
     #  Remove consensus outputs that are copied to the assembly output directory.
     foreach my $f (qw(assembly.homopolymer-compressed.layout
                       assembly.disconnected.fasta
@@ -131,12 +159,15 @@ sub cleanupAssembly ($$) {
 
     #  Save bwa logs and scripts, but wipe the job outputs and databases.
     if (-e "$dirn/8-hicPipeline/mapped001.bam")   { system("rm -f $dirn/8-hicPipeline/mapped???.bam"); }
+    if (-e "$dirn/8-hicPipeline/mapped001_nodefiltered.bam") { system("rm -f $dirn/8-hicPipeline/mapped???_nodefiltered.bam"); }
     if (-e "$dirn/8-hicPipeline/align_bwa001.sh") { system("cd $dirn/8-hicPipeline && tar -cf align-bwa-logs.tar align_bwa* && rm -f align_bwa*"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.amb")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.amb"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.ann")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.ann"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.bwt")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.bwt"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.pac")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.pac"); }
-    if (-e "$dirn/8-hicPipeline/unitigs.fasta.sa")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.sa"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta.sa")   { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.sa"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta")      { system("pigz $dirn/8-hicPipeline/unitigs.fasta"); }
+    if (-e "$dirn/8-hicPipeline/paths.hpc.fasta")    { system("rm -f $dirn/8-hicPipeline/paths.hpc.fasta"); }
 
     printf " - AFTER: ";   my $after = getDirectorySize($dirn);
     printf "%6.1fGB (%.3f%%)\n", $after, 100.0 * $after / $before;
