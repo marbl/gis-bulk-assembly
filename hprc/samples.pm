@@ -14,7 +14,7 @@ require Exporter;
 use Cwd 'abs_path';
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(loadSamples numFiles dataAvailable $root $rasm $rsoft %samples);
+@EXPORT = qw(getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft %samples);
 
 use strict;
 use warnings "all";
@@ -96,6 +96,9 @@ sub loadSamples ($) {
       $h =~ s/mat_ilmn/mat-ilmn/;
       $h =~ s/pat_ilmn/pat-ilmn/;
 
+      $h =~ s/parameters/params/;
+      $h =~ s/options/params/;
+
       #printf "%20s -> %s\n", $o, $h;
 
       push @cols, $h;
@@ -134,6 +137,16 @@ sub loadSamples ($) {
   }
 }
 
+#
+#  Return optional parameters if the sample has them defined
+#  Otherwise return empty string
+#
+sub getParameters ($) {
+  my $samp  = shift @_;
+
+  my $opts  = $samples{$samp}{"params"};
+  return (defined($opts)) ? join(" ", @$opts) : ""
+}
 
 #
 #  Return the number of files for a given sample and type.

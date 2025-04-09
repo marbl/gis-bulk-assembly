@@ -10,7 +10,7 @@
 ##
 
 
-sub createCanuTrio ($$$$$$$) {
+sub createCanuTrio ($$$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "canu-trio";
   my $nano  = shift @_;
@@ -19,6 +19,7 @@ sub createCanuTrio ($$$$$$$) {
   my $missi = shift @_;
   my $compl = shift @_;
   my $unava = shift @_;
+  my $params = shift @_;
   my $dirn  = "$rasm/$samp";
 
   if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {

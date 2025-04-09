@@ -20,7 +20,7 @@ sub locateHapmers ($) {     #  In array context, returns the expected locations 
   return wantarray() ? ($mati, $pati) : $missi;
 }
 
-sub createVerkkoTrio ($$$$$$) {
+sub createVerkkoTrio ($$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-trio";
   my $hifi  = shift @_;
@@ -28,6 +28,7 @@ sub createVerkkoTrio ($$$$$$) {
   my $missi = shift @_;
   my $unava = shift @_;
   my $compl = shift @_;
+  my $params= shift @_;
   my $sdir  = "$rasm/$samp";
 
   my ($mati, $pati) = locateHapmers($samp);
@@ -87,6 +88,7 @@ sub createVerkkoTrio ($$$$$$) {
     print CMD "    --hap-kmers $pati \\\n";
     print CMD "                $mati \\\n";
     print CMD "                trio \\\n";
+    print CMD "    $params          \\\n";
     print CMD "  && \\\n";
     print CMD "  tar -C $flav -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz     && rm -rf $flav/.snakemake && \\\n";
     print CMD "  tar -C $flav -cf - batch-scripts | gzip -9 > $flav/batch-scripts.tar.gz && rm -rf $flav/batch-scripts\n";

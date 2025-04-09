@@ -117,6 +117,8 @@ sub computeAssembly ($$) {
   my $hic1 = getDownloadedFiles($samp, "hic1");
   my $hic2 = getDownloadedFiles($samp, "hic2");
 
+  my $params = getParameters($samp);
+
   my $hifiMissing   =  (($hifi eq "") && (numFiles($samp, "hifi")     > 0));
   my $nanoMissing   =  (($nano eq "") && (numFiles($samp, "ont")      > 0));
   my $trioMissing   = ((($mati eq "") && (numFiles($samp, "mat-ilmn") > 0)) ||
@@ -245,10 +247,10 @@ sub computeAssembly ($$) {
   #      base -> trio -> thic
   #           -> hi-c
   if ($flav eq "verkko-full") {
-    my $scrB = createVerkkoBase   ($samp, $hifi, $nano,               $missingB,        "", $compl);
-    my $scrT = createVerkkoTrio   ($samp, $hifi, $nano,               $missingT, $unavailT, $compl);   #  Trio DBs implicitly exist.
-    my $scrH = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missingH, $unavailH, $compl);
-    my $scrC = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missingC, $unavailC, $compl);
+    my $scrB = createVerkkoBase   ($samp, $hifi, $nano,               $missingB,        "", $compl, $params);
+    my $scrT = createVerkkoTrio   ($samp, $hifi, $nano,               $missingT, $unavailT, $compl, $params);   #  Trio DBs implicitly exist.
+    my $scrH = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missingH, $unavailH, $compl, $params);
+    my $scrC = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missingC, $unavailC, $compl, $params);
 
     my $jidB = submitIf($samp, "verkko-base", $scrB, $complB, undef, $missingB,        "", $$opts{"submit"});   #  Depends on no earlier job.
     my $jidT = submitIf($samp, "verkko-trio", $scrT, $complT, $jidB, $missingT, $unavailT, $$opts{"submit"});   #  Depends on base.
@@ -261,13 +263,13 @@ sub computeAssembly ($$) {
     my $scr;
     my $unavail;
 
-    if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl); }
-    if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl); }
+    if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl, $params); }
+    if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl, $params); }
 
-    if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl); }
-    if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl); }   #  Trio DBs implicitly exist.
-    if ($flav eq "verkko-hi-c") { $scr = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailH, $compl); }
-    if ($flav eq "verkko-thic") { $scr = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailC, $compl); }
+    if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl, $params); }
+    if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl, $params); }   #  Trio DBs implicitly exist.
+    if ($flav eq "verkko-hi-c") { $scr = createVerkkoHiC    ($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailH, $compl, $params); }
+    if ($flav eq "verkko-thic") { $scr = createVerkkoTrioHiC($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailC, $compl, $params); }
 
     if    ($compl)              { print "$samp/$flav - FINISHED\n";                                        }
     elsif (-e "$scr.jid")       { print "$samp/$flav - RUNNING\n";                                         }

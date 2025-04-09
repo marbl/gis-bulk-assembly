@@ -10,7 +10,7 @@
 ##
 
 
-sub createVerkkoTrioHiC ($$$$$$$) {
+sub createVerkkoTrioHiC ($$$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-thic";
   my $hifi  = shift @_;
@@ -20,6 +20,7 @@ sub createVerkkoTrioHiC ($$$$$$$) {
   my $missi = shift @_;
   my $unava = shift @_;
   my $compl = shift @_;
+  my $params= shift @_;
   my $sdir  = "$rasm/$samp";
 
   if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
@@ -93,6 +94,7 @@ sub createVerkkoTrioHiC ($$$$$$$) {
     print CMD "      --nano $nano \\\n";
     print CMD "      --hic1 $hic1 \\\n";
     print CMD "      --hic2 $hic2 \\\n";
+    print CMD "      $params      \\\n";
     print CMD "    && \\\n";
     print CMD "    mv $flav/8-hicPipeline/hicverkko.colors.tsv \\\n";
     print CMD "       $flav/8-hicPipeline/hicverkko.hiccolors.tsv \\\n";

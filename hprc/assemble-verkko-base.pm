@@ -8,7 +8,7 @@
 #  domain.
 #
 ##
-sub createVerkkoBase ($$$$$$) {
+sub createVerkkoBase ($$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-base";
   my $hifi  = shift @_;
@@ -16,6 +16,7 @@ sub createVerkkoBase ($$$$$$) {
   my $missi = shift @_;
   my $unava = shift @_;
   my $compl = shift @_;
+  my $params = shift @_;
   my $sdir  = "$rasm/$samp";
 
   my $ogfa = "5-untip/unitig-unrolled-unitig-unrolled-popped-unitig-normal-connected-tip";
@@ -61,6 +62,7 @@ sub createVerkkoBase ($$$$$$) {
     print CMD "    " . getScreenOption("$root/$rsoft/verkko") . " \\\n";
     print CMD "    --hifi $hifi \\\n";
     print CMD "    --nano $nano \\\n";
+    print CMD "    $params      \\\n";
     print CMD "  && \\\n";
     print CMD "  ln -s $ogfa.gfa $flav/contigs.gfa \\\n";
     print CMD "  && \\\n";

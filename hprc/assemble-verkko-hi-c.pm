@@ -10,7 +10,7 @@
 ##
 
 
-sub createVerkkoHiC ($$$$$$$$) {
+sub createVerkkoHiC ($$$$$$$$$) {
   my $samp  = shift @_;
   my $flav  = "verkko-hi-c";
   my $hifi  = shift @_;
@@ -20,6 +20,7 @@ sub createVerkkoHiC ($$$$$$$$) {
   my $missi = shift @_;
   my $unava = shift @_;
   my $compl = shift @_;
+  my $params= shift @_;
   my $sdir  = "$rasm/$samp";
 
   if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
@@ -76,6 +77,7 @@ sub createVerkkoHiC ($$$$$$$$) {
     print CMD "    --nano $nano \\\n";
     print CMD "    --hic1 $hic1 \\\n";
     print CMD "    --hic2 $hic2 \\\n";
+    print CMD "    $params      \\\n";
     print CMD "  && \\\n";
     print CMD "  tar -C $flav                             -cf - .snakemake    | gzip -9 > $flav/snakemake.tar.gz                                 && rm -rf $flav/.snakemake && \\\n";
     print CMD "  tar -C $flav/8-hicPipeline/final_contigs -cf - .snakemake    | gzip -9 > $flav/8-hicPipeline/final_contigs/snakemake.tar.gz     && rm -rf $flav/8-hicPipeline/final_contigs.snakemake && \\\n";
