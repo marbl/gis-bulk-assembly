@@ -32,15 +32,15 @@ sub displaySummary ($$$) {
   my $types  = shift @_;
   my $opts   = shift @_;
 
-  my ($HnReads, $OnReads, $TnReads, $CnReads) = ( 0, 0, 0, 0 );
-  my ($HnBases, $OnBases, $TnBases, $CnBases) = ( 0, 0, 0, 0 );
+  my ($HnReads, $OnReads, $InReads, $TnReads, $CnReads) = ( 0, 0, 0, 0, 0 );
+  my ($HnBases, $OnBases, $InBases, $TnBases, $CnBases) = ( 0, 0, 0, 0, 0 );
   my ($isHic12, $isHic) = (0, 0);
 
   if ($displaySummaryIndex == 0) {
-    print "--------  ------- HiFi -------  -------- ONT -------  --- Child --  -------------- Trio --------------  -------- Hi-C -------\n";
+    print "--------  ------- HiFi -------  -------- ONT -------  --- Child -----------  -------------- Trio --------------  -------- Hi-C -------\n";
     print "                                                                                  maternal   paternal\n";
-    print "sample    coverage   het'osity  coverage   het'osity     het'osity  coverage   het'osity    het'osity  coverage   het'osity\n";
-    print "--------  --------------------  --------------------  ------------  ---------------------------------  --------------------\n";
+    print "sample    coverage   het'osity  coverage   het'osity  coverage   het'osity  coverage   het'osity    het'osity  coverage   het'osity\n";
+    print "--------  --------------------  --------------------  ---------------------  ---------------------------------  --------------------\n";
     $displaySummaryIndex = 1;
   }
 
@@ -72,6 +72,7 @@ sub displaySummary ($$$) {
     if ($t eq "hifi")          { $HnReads += $nReads;  $HnBases += $nBases; }
     if ($t eq "hifi-cutadapt") { $HnReads += $nReads;  $HnBases += $nBases; }
     if ($t eq "ont")           { $OnReads += $nReads;  $OnBases += $nBases; }
+    if ($t eq "ilmn")          { $InReads += $nReads;  $InBases += $nBases; }
     if ($t eq "mat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
     if ($t eq "pat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
     if ($t eq "hic1" || $t eq "hic2") {
@@ -89,7 +90,7 @@ sub displaySummary ($$$) {
   #  Read genomescope summary.
 
   my ($HhetMin, $HhetMax) = ( 0, 1 );
-  my ($ChetMin, $ChetMax) = ( 0, 1 );
+  my ($IhetMin, $IhetMax) = ( 0, 1 );
   my ($MhetMin, $MhetMax) = ( 0, 1 );
   my ($PhetMin, $PhetMax) = ( 0, 1 );
 
@@ -107,8 +108,8 @@ sub displaySummary ($$$) {
     open(GS, "< $root/hprc-data/$samp/genomescope/ilmn/summary.txt") or die "Failed to open 'hprc-data/$samp/genomescope/ilmn/summary.txt' for reading: $!\n";
     while (<GS>) {
       if (m/Heterozygous\s+\(ab\)\s+(\d+.\d+)%\s+(\d+.\d+)%/) {
-        $ChetMin = $1;
-        $ChetMax = $2;
+        $IhetMin = $1;
+        $IhetMax = $2;
       }
     }
     close(GS);
@@ -147,11 +148,11 @@ sub displaySummary ($$$) {
     }
   }
 
-  printf "%-8s  %6.2fx %12s  %6.2fx %12s  %12s  %6.2fx %12s %12s  %6.2fx %12s\n",
+  printf "%-8s  %6.2fx %12s  %6.2fx %12s  %6.2fx %12s  %6.2fx %12s %12s  %6.2fx %12s\n",
       $samp,
       $HnBases / 3100000000.0, showHet($HhetMin, $HhetMax),                                #  HiFi
       $OnBases / 3100000000.0, showHet(   0.000,    1.000),                                #  ONT
-                               showHet($ChetMin, $ChetMax),                                #  Child
+      $InBases / 3100000000.0, showHet($IhetMin, $IhetMax),                                #  Child
       $TnBases / 3100000000.0, showHet($MhetMin, $MhetMax), showHet($PhetMin, $PhetMax),   #  Parents
       $CnBases / 3100000000.0, showHet(   0.000,    1.000);                                #  Hi-C
 }
