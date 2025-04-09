@@ -136,6 +136,16 @@ sub cleanupAssembly ($$) {
     if (-e "$dirn/5-untip/unitig-unrolled-popped-connected-tip.gfa")        { system("pigz $dirn/5-untip/unitig-unrolled-popped-connected-tip.gfa"); }
     if (-e "$dirn/5-untip/unrolled-popped-connected-tip.gfa")       { system("pigz $dirn/5-untip/unrolled-popped-connected-tip.gfa"); }
     if (-e "$dirn/5-untip/unrolled-popped-unitig-unrolled-popped-connected-tip.gfa")        { system("pigz $dirn/5-untip/unrolled-popped-unitig-unrolled-popped-connected-tip.gfa"); }
+    if (-e "$dirn/4-processONT/alns-cut.gaf")                                               { system("pigz $dirn/4-processONT/alns-cut.gaf");}
+    if (-e "$dirn/4-processONT/alns-cut-trim.gaf")                                          { system("pigz $dirn/4-processONT/alns-cut-trim.gaf");}
+    if (-e "$dirn/4-processONT/alns-graphalgn-nogap-1.gaf")                                 { system("pigz $dirn/4-processONT/alns-graphalgn-nogap-1.gaf");}
+    if (-e "$dirn/4-processONT/alns-ont-filter-trim.gaf")                                   { system("pigz $dirn/4-processONT/alns-ont-filter-trim.gaf");}
+    if (-e "$dirn/4-processONT/alns-ont-nogap-1.gaf")                                       { system("pigz $dirn/4-processONT/alns-ont-nogap-1.gaf");}
+    if (-e "$dirn/4-processONT/alns-ont-nogap-2.gaf")                                       { system("pigz $dirn/4-processONT/alns-ont-nogap-2.gaf");}
+    if (-e "$dirn/4-processONT/alns-ont-nogap-3.gaf")                                       { system("pigz $dirn/4-processONT/alns-ont-nogap-3.gaf");}
+    if (-e "$dirn/4-processONT/alns-ont-nogap.gaf")                                         { system("pigz $dirn/4-processONT/alns-ont-nogap.gaf");}
+    if (-e "$dirn/4-processONT/alns-trimmed.gaf")                                           { system("pigz $dirn/4-processONT/alns-trimmed.gaf");}
+    if (-e "$dirn/4-processONT/fake-ont-alns.gaf")                                          { system("pigz $dirn/4-processONT/fake-ont-alns.gaf");}
 
     #  Remove consensus outputs that are copied to the assembly output directory.
     foreach my $f (qw(assembly.homopolymer-compressed.layout
@@ -170,7 +180,7 @@ sub cleanupAssembly ($$) {
     if (-e "$dirn/8-hicPipeline/paths.hpc.fasta")    { system("rm -f $dirn/8-hicPipeline/paths.hpc.fasta"); }
 
     printf " - AFTER: ";   my $after = getDirectorySize($dirn);
-    printf "%6.1fGB (%.3f%%)\n", $after, 100.0 * $after / $before;
+    printf "%6.1fGB (%.3f%%)\n", $after, 100.0 * ($before > 0 ? $after / $before : 1);
   }
 }
 
