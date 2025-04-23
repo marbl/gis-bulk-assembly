@@ -194,7 +194,7 @@ sub fetchData ($$$) {
       #my $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
       my $c;
       if ($awsf =~ /^s3/) {
-        $c = "aws --no-sign-request s3 cp '$awsf' '$locf' > $locf.err 2>&1";
+        $c = "aws --no-sign-request s3 cp --only-show-errors '$awsf' '$locf' > $locf.err 2>&1";
       } elsif ($awsf =~ /^ftp/) {
         $c = "curl -f -o '$locf' '$awsf' > $locf.err 2>&1";
       } else {
@@ -244,12 +244,12 @@ sub getFileMap ($$@) {
   my $subd;
 
   if      ($type eq "hic1") {       #  If asked for a specific Hi-C end, make
-    $hics = qr/_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  two extensions, one that we want to SAVE,
-    $hici = qr/_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  one that we want to INGORE.  We'll flag
+    $hics = qr/_L\d_1.fq.gz$|_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  two extensions, one that we want to SAVE,
+    $hici = qr/_L\d_2.fq.gz$|_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  one that we want to INGORE.  We'll flag
     $type = "hic";                  #  anything not in either of those as 'missing',
   } elsif ($type eq "hic2") {       #
-    $hics = qr/_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  Also use 'hic' as the original type for
-    $hici = qr/_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  file discovery.
+    $hics = qr/_L\d_2.fq.gz$|_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  Also use 'hic' as the original type for
+    $hici = qr/_L\d_1.fq.gz$|_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  file discovery.
     $type = "hic";
   }
 
