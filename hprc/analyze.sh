@@ -5,7 +5,7 @@
 #SBATCH --time=4:00:00
 #SBATCH --partition=norm,quick
 #SBATCH --output=./analysis.err
-#SBATCH --job-name=va${1}
+#SBATCH --job-name=va$1
 #
 
 module load samtools
@@ -23,8 +23,15 @@ trap "rm -f analysis.jid" EXIT
 
 cpus=$SLURM_CPUS_PER_TASK
 
-refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
-refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
+if [ -n $HPRC_ROOT_REFERENCE ]; then
+   refn=$HPRC_ROOT_REFERENCE
+   refc=$HPRC_ROOT_REFERENCE_HPC
+   odb=$HPRC_ROOT_REFERENCE_ODB
+else
+   refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
+   refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
+   odb="primates_odb10"
+fi
 marbl_utils="/data/korens/devel/marbl_utils"
 
 samp=$1
@@ -268,7 +275,7 @@ fi
 
 
 for asm in assembly.haplotype1 assembly.haplotype2 assembly.unassigned ; do
-    for db in primates_odb10 ; do
+    for db in $odb ; do
         if [ ! -e $asm.$db.full_table.tsv -o ! -e $asm.$db.summary.txt ]; then
             $compleasm run -t$cpus -l $db --library_path $compledir/mb_downloads -a ../$asm.fasta -o $asm \
             && \

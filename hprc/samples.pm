@@ -14,7 +14,7 @@ require Exporter;
 use Cwd 'abs_path';
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft %samples);
+@EXPORT = qw(getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft $refn $refc $odb %samples);
 
 use strict;
 use warnings "all";
@@ -25,6 +25,9 @@ no  warnings "uninitialized";
 our $root  = abs_path('.');    #"/data/Phillippy2/projects/hprc-assemblies";
 our $rasm  = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
 our $rsoft = "/invalid/path";  # now set tin main;
+our $refn  = "/invalid/path";  # the reference non-HPC
+our $refc  = "/invalid/path";  # the reference HPC
+our $odb   = "/invalid/path";  # the ODB database to use (e.g. primates_odb10)
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";

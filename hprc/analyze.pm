@@ -127,7 +127,7 @@ sub startTelomereAnalysis ($$) {
   elsif ($unavail)                    { print "$samp/$flav/analysis   - UNAVAILABLE ($unavail)\n"; }
   elsif (! $ready)                    { print "$samp/$flav/analysis   - ASSEMBLY-NOT-READY\n"; }
   elsif (! $$opts{"submit"})          { print "$samp/$flav/analysis   - READY-TO-COMPUTE\n"; }
-  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -J va$samp -D $diro --export=HPRC_ROOT=$root $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
+  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -J va$samp -D $diro --export=HPRC_ROOT=$root --export=HPRC_ROOT_REFERENCE=$refn --export=HPRC_ROOT_REFERENCE_HPC=$refc --export=HPRC_ROOT_REFERENCE_ODB=$odb $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
 }
 
 1;

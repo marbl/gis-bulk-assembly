@@ -52,6 +52,38 @@ my %readTypes;
 #  All software will be unversioned and pulled from the folder named $root/software
 #      but verkko and graphaligner will be pulled from the one specified by the version below
 
+my $config_file = "config.ini";
+my %config;
+my $current_section;
+open my $fh, '<', $config_file or die "Cannot open config file: $!";
+while (<$fh>) {
+    chomp;
+    next if /^\s*$/ || /^\s*#/;  # skip empty lines and comments
+
+    if (/^\[(\w+)\]/) {
+        $current_section = $1;
+    }
+    elsif ($current_section && /^(\w+)\s*=\s*(.+)$/) {
+        my ($key, $value) = ($1, $2);
+        # Remove quotes if present
+        $value =~ s/^['"]|['"]$//g;
+        # Parse list if it's a list (e.g., ['a','b'])
+        if ($value =~ /^\[.*\]$/) {
+		    my @list = $value =~ /['"]([^'"]+)['"]/g;  # capture the content inside single or double quotes
+            @list = map {
+              my $item = $_;
+              $item =~ s/\$root/$root/g if defined $root;
+              $item;
+            } @list;
+            $config{$current_section}{$key} = \@list;
+        } else {
+            $value =~ s/\$root/$root/g if defined $root;
+            $config{$current_section}{$key} = $value;
+        }
+    }
+}
+close $fh;
+
 while (scalar(@ARGV) > 0) {
   my $arg = $ARGV[0];  shift @ARGV;
 
@@ -60,29 +92,36 @@ while (scalar(@ARGV) > 0) {
   if ($arg =~ /^--v(\d+)$/) {
     my $v = $1;
 
-    if ($v == 3) {
-      loadSamples("$root/hprc-cache/b2.tsv");
-      loadSamples("$root/hprc-cache/b3.tsv");
-      $rasm  = "$root/assemblies-v3";
-      $rsoft = "software-v3";
-    }
-    elsif ($v == 4) {
-      loadSamples("$root/hprc-cache/b2.tsv");
-      loadSamples("$root/hprc-cache//b2-moved.tsv");
-      loadSamples("$root/hprc-cache/b3.tsv");
-      loadSamples("$root/hprc-cache/b8.tsv");
-      loadSamples("$root/hprc-cache/b1.tsv");
-      loadSamples("$root/hprc-cache/b5.tsv");
-      loadSamples("$root/hprc-cache/b6.tsv");
-      loadSamples("$root/hprc-cache/b7.tsv");
-      loadSamples("$root/hprc-cache/b9.tsv");
-      loadSamples("$root/hprc-cache/b10.tsv");
-      loadSamples("$root/hprc-cache/b11.tsv");
-     # loadSamples("$root/hprc-cache/yr4_30hr.tsv");
-      $rasm  = "$root/assemblies-v4";
-      $rsoft = "software-v4";
-    }
-    else {
+   if (exists $config{$v}) {
+      my %vars = %{ $config{$v}};
+	  print STDERR "Configuration: v$v\n";
+      foreach my $sample (@{$vars{samples} }) {
+         $sample =~ s/'//g;  # remove all single quotes
+
+		 if ( -e $sample) {
+		    loadSamples($sample);
+	     } else {
+		    die "Invalid sample file $sample provided, check $config_file\n";
+		 }
+         print STDERR "Sample file:  $sample\n";
+      }
+	  $rasm  = $vars{rasm} or die "No assembly output defined for $v\n";
+      $rsoft = $vars{rsoft} or die "No software defined for $v\n";
+      $refn  = $vars{refn} or die "No reference defined for $v\n";
+      $refc  = $vars{refc} or die "No reference (HPC) defined for $v\n";
+      $odb   = $vars{odb} or die " No ODB database defined for $v\n";
+
+	  $ENV{'HPRC_ROOT_REFERENCE'} = "$refn";
+	  $ENV{'HPRC_ROOT_REFERENCE_HPC'} = "$refc";
+	  $ENV{'HPRC_ROOT+REFERENCE_ODB'} = "$odb";
+
+	  print STDERR "Software:     $rsoft\n";
+	  print STDERR "Output asm:   $rasm\n";
+      print STDERR "Ref:          $refn\n";
+      print STDERR "Ref (HPC):    $refc\n";
+      print STDERR "ODB DB:       $odb\n";
+    } else {
+      die "Unknown configuration v$v requested, check your config file $config_file\n";
     }
   }
 
@@ -267,7 +306,7 @@ if (($opts{'submit'}) && ($ENV{'HOSTNAME'} =~ m/helix/)) {
 }
 
 if (scalar(keys %samples) == 0) {
-  push @errs, "No known samples; you probably need to specify --v3 or --v4 or similar.";
+  push @errs, "No known samples; you probably need to specify --vX based on what you specified in the config.ini file.";
 }
 
 if (($mode eq "help") || (scalar(@errs) > 0)) {
