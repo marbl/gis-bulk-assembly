@@ -22,8 +22,9 @@ set -x
 trap "rm -f analysis.jid" EXIT
 
 cpus=$SLURM_CPUS_PER_TASK
+scontrol update JobName=va$1 JobId=$SLURM_JOB_ID
 
-if [ -n $HPRC_ROOT_REFERENCE ]; then
+if [ -n "$HPRC_ROOT_REFERENCE" ]; then
    refn=$HPRC_ROOT_REFERENCE
    refc=$HPRC_ROOT_REFERENCE_HPC
    odb=$HPRC_ROOT_REFERENCE_ODB
@@ -40,6 +41,9 @@ if [ -n "$HPRC_ROOT" ]; then
 else
    root="/data/Phillippy2/projects/hprc-assemblies"
 fi
+echo "Root: '$root'"
+echo "Ref: '$refn' and '$refc'"
+echo "odb: '$odb'"
 base=`pwd`
 base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c-test/base/g | sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
 
