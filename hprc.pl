@@ -52,7 +52,7 @@ my %readTypes;
 #  All software will be unversioned and pulled from the folder named $root/software
 #      but verkko and graphaligner will be pulled from the one specified by the version below
 
-my $config_file = "config.ini";
+my $config_file = "$root/config.ini";
 my %config;
 my $current_section;
 open my $fh, '<', $config_file or die "Cannot open config file: $!";

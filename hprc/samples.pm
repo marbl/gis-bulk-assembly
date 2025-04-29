@@ -11,7 +11,7 @@
 
 package hprc::samples;
 require Exporter;
-use Cwd 'abs_path';
+use FindBin;
 
 @ISA    = qw(Exporter);
 @EXPORT = qw(getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft $refn $refc $odb %samples);
@@ -22,7 +22,7 @@ no  warnings "uninitialized";
 
 #  These are also set in analyze.sh.
 
-our $root  = abs_path('.');    #"/data/Phillippy2/projects/hprc-assemblies";
+our $root  = $FindBin::Bin;    #"/data/Phillippy2/projects/hprc-assemblies";
 our $rasm  = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
 our $rsoft = "/invalid/path";  # now set tin main;
 our $refn  = "/invalid/path";  # the reference non-HPC
