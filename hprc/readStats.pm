@@ -30,7 +30,7 @@ sub summarizeReads ($$$) {
 
   foreach my $type (sort keys %$types) {
     my %files = getFileMap($samp, $type, "include-files-that-don't-exist");
-	if ($type eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
+    if ($type eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
     my $needCompute = 0;
 
     foreach my $file (values %files) {

@@ -48,7 +48,7 @@ sub displaySummary ($$$) {
 
   foreach my $t (sort keys %$types) {
     my %files = getFileMap($samp, $t, "even-those-that-don't-exist");
-	if ($t eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
+    if ($t eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
 
     my $nReads = 0;
     my $nBases = 0;
