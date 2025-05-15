@@ -14,7 +14,7 @@ require Exporter;
 use FindBin;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft $refn $refc $odb %samples);
+@EXPORT = qw(makeAbsolute getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft $refn $refc $odb %samples);
 
 use strict;
 use warnings "all";
@@ -32,6 +32,19 @@ our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";
 $ENV{'HPRC_ROOT'} = "$root";
+
+sub makeAbsolute {
+    my $path = shift;
+
+    # If path starts with a slash, it's already absolute
+    return $path if $path =~ m{^/};
+
+    # Get current working directory
+    my $cwd = `pwd`;
+    chomp($cwd);
+
+    return "$cwd/$path";
+}
 
 #
 #  Extract the values from within brackets: "[ A,B,C,D ]"

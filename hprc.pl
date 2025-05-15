@@ -95,29 +95,35 @@ while (scalar(@ARGV) > 0) {
 
    if (exists $config{$v}) {
       my %vars = %{ $config{$v}};
-	  print STDERR "Configuration: v$v\n";
+      print STDERR "Configuration: v$v\n";
       foreach my $sample (@{$vars{samples} }) {
          $sample =~ s/'//g;  # remove all single quotes
 
-		 if ( -e $sample) {
-		    loadSamples($sample);
-	     } else {
-		    die "Invalid sample file $sample provided, check $config_file\n";
-		 }
+         if ( -e $sample) {
+            loadSamples($sample);
+         } else {
+            die "Invalid sample file $sample provided, check $config_file\n";
+         }
          print STDERR "Sample file:  $sample\n";
       }
-	  $rasm  = $vars{rasm} or die "No assembly output defined for $v\n";
-      $rsoft = $vars{rsoft} or die "No software defined for $v\n";
-      $refn  = $vars{refn} or die "No reference defined for $v\n";
-      $refc  = $vars{refc} or die "No reference (HPC) defined for $v\n";
+      $rasm  = makeAbsolute($vars{rasm}) or die "No assembly output defined for $v\n";
+      $rsoft = makeAbsolute($vars{rsoft}) or die "No software defined for $v\n";
+      $refn  = makeAbsolute($vars{refn}) or die "No reference defined for $v\n";
+      $refc  = makeAbsolute($vars{refc}) or die "No reference (HPC) defined for $v\n";
       $odb   = $vars{odb} or die " No ODB database defined for $v\n";
 
-	  $ENV{'HPRC_ROOT_REFERENCE'} = "$refn";
-	  $ENV{'HPRC_ROOT_REFERENCE_HPC'} = "$refc";
-	  $ENV{'HPRC_ROOT+REFERENCE_ODB'} = "$odb";
+      # make sure the paths exist
+      if (! -d $root)  { die "Invalid root : $root, check your config\n"; }
+      if (! -d $rsoft) { die "Invalid rsoft: $rsoft, check your config\n"; }
+      if (! -e $refn)  { die "Invalid ref  : $refn, check your config\n"; }
+      if (! -e $refc)  { die "Invalid refc : $refc, check your config\n"; }
 
-	  print STDERR "Software:     $rsoft\n";
-	  print STDERR "Output asm:   $rasm\n";
+      $ENV{'HPRC_ROOT_REFERENCE'}     = "$refn";
+      $ENV{'HPRC_ROOT_REFERENCE_HPC'} = "$refc";
+      $ENV{'HPRC_ROOT_REFERENCE_ODB'} = "$odb";
+
+      print STDERR "Software:     $rsoft\n";
+      print STDERR "Output asm:   $rasm\n";
       print STDERR "Ref:          $refn\n";
       print STDERR "Ref (HPC):    $refc\n";
       print STDERR "ODB DB:       $odb\n";

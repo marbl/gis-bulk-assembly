@@ -38,7 +38,7 @@ require "hprc/assemble-archive.pm";
 
 sub getScreenOption($) {
    my $verkko = shift @_;
-   my $isNewScreen = `$verkko/bin/verkko --help |grep -c screen-human`;
+   my $isNewScreen = `$verkko --help |grep -c screen-human`;
 
    if ($isNewScreen != 0) {
       return "--screen-human-contaminants";
@@ -199,7 +199,7 @@ sub computeAssembly ($$) {
     my @m;
     push @m, "hifi-cutadapt"     if ($hifiMissing);
     push @m, "ont"               if ($nanoMissing);
-    push @m, "trio"              if ($trioMissing);
+    #push @m, "trio"             if ($trioMissing);  # trio inputs aren't actually used for verkko, only the hapmers which we check below so no need for raw illumina files
     #ush @m, "hic"               if ($hicMissing);
     push @m, "base assembly"     if ($baseAsmMissing) && ($flav ne "verkko-full");
     #ush @m, "trio assembly"     if ($trioAsmMissing);
@@ -221,7 +221,7 @@ sub computeAssembly ($$) {
     my @m;
     push @m, "hifi-cutadapt"     if ($hifiMissing);
     push @m, "ont"               if ($nanoMissing);
-    push @m, "trio"              if ($trioMissing);
+    #push @m, "trio"              if ($trioMissing); # trio inputs aren't actually used for verkko, only the hapmers which we check below so no need for raw illumina files
     push @m, "hic"               if ($hicMissing);
     push @m, "base assembly"     if ($baseAsmMissing) && ($flav ne "verkko-full");
     push @m, "trio assembly"     if ($trioAsmMissing) && ($flav ne "verkko-full");

@@ -86,9 +86,9 @@ sub createVerkkoTrioHiC ($$$$$$$$) {
     print CMD "  fi\n";
     print CMD "\n";
     print CMD "  if [ ! -e $flav/8-hicPipeline/rukki.paths.tsv ] ; then\n";
-    print CMD "    $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav --snakeopts '-U hicPhasing' \\\n";
+    print CMD "    $rsoft/verkko/bin/verkko --graphaligner $rsoft/graphaligner/bin/GraphAligner --slurm -d $flav --snakeopts '-U hicPhasing' \\\n";
     print CMD "      --ovb-run 8 32 32 \\\n";
-    print CMD "    " . getScreenOption("$root/$rsoft/verkko") . " \\\n";
+    print CMD "    " . getScreenOption("$rsoft/verkko/bin/verkko") . " \\\n";
     #rint CMD "      --rdna-scaff \\\n";   #  Verkko 2.0 needs this.
     print CMD "      --hifi $hifi \\\n";
     print CMD "      --nano $nano \\\n";
@@ -115,9 +115,9 @@ sub createVerkkoTrioHiC ($$$$$$$$) {
     print CMD "  fi\n";
     print CMD "\n";
     print CMD "  if [ ! -e $flav/assembly.fasta -a -e $flav/8-hicPipeline/rukki.paths.tsv ] ; then\n";
-    print CMD "    $root/$rsoft/verkko/bin/verkko --graphaligner $root/$rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
+    print CMD "    $rsoft/verkko/bin/verkko --graphaligner $rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "      --ovb-run 8 32 32 \\\n";
-    print CMD "    " . getScreenOption("$root/$rsoft/verkko") . " \\\n";
+    print CMD "    " . getScreenOption("$rsoft/verkko/bin/verkko") . " \\\n";
     #rint CMD "      --rdna-scaff \\\n";   #  Verkko 2.0 needs this.
     print CMD "      --hifi $hifi \\\n";
     print CMD "      --nano $nano \\\n";

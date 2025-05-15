@@ -123,7 +123,7 @@ sub computeYakmers ($$) {
     #rint CMD "#SBATCH --gres=lscratch:512\n";
     print CMD "#SBATCH --cpus-per-task=16\n";
     print CMD "#SBATCH --mem=96g\n";
-    print CMD "#SBATCH --time=8:00:00\n";
+    print CMD "#SBATCH --time=16:00:00\n";
     print CMD "#SBATCH --output=$yako/yakmers.err\n";
     print CMD "#SBATCH --job-name=yak$samp\n";
     print CMD "#\n";
