@@ -22,7 +22,7 @@ use experimental "for_list";
 
 use hprc::samples;
 use hprc::aws;
-
+use hprc::readCorrect;
 
 
 my $displaySummaryIndex = 0;
@@ -48,6 +48,8 @@ sub displaySummary ($$$) {
 
   foreach my $t (sort keys %$types) {
     my %files = getFileMap($samp, $t, "even-those-that-don't-exist");
+	if ($t eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
+
     my $nReads = 0;
     my $nBases = 0;
 
@@ -71,7 +73,7 @@ sub displaySummary ($$$) {
 
     if ($t eq "hifi")          { $HnReads += $nReads;  $HnBases += $nBases; }
     if ($t eq "hifi-cutadapt") { $HnReads += $nReads;  $HnBases += $nBases; }
-    if ($t eq "ont")           { $OnReads += $nReads;  $OnBases += $nBases; }
+    if ($t eq "ont" || $t eq "ont-r10") { $OnReads += $nReads;  $OnBases += $nBases; }
     if ($t eq "ilmn")          { $InReads += $nReads;  $InBases += $nBases; }
     if ($t eq "mat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
     if ($t eq "pat-ilmn")      { $TnReads += $nReads;  $TnBases += $nBases; }
@@ -163,6 +165,7 @@ sub displayDetails ($$$) {
   my $type  = shift @_;
   my $opts  = shift @_;
   my %files = getFileMap($samp, $type, "even-those-that-don't-exist");
+  if ($type eq "hifi-cutadapt" && getCorrectedFiles($samp) ne "") { $files{"HIFIASM-CORRECTED"} = getCorrectedFiles($samp); }
 
   #print "Type $t has ", scalar(values %files), " files.\n";
 
@@ -173,7 +176,7 @@ sub displayDetails ($$$) {
     printf "-------- --------- | -------- --------- | -------- --------- | -------- --------- |\n";
   }
 
-  if ($type eq "ont") {
+  if ($type eq "ont" || $type eq "ont-r10") {
     printf "\n";
     printf "    0 Kbp < 50 Kbp  |    50 Kbp < 100 Kbp |   100 Kbp < 200 Kbp | 200 Kbp < {max}     | $samp\n";
     printf "     Gbp  num-reads |       Gbp num-reads |       Gbp num-reads |       Gbp num-reads |\n";
@@ -216,7 +219,7 @@ sub displayDetails ($$$) {
           $len020, $idx020, $len050, $idx050, $len080, $idx080, $len100, $idx100, $name;
     }
 
-    if ($type eq "ont") {
+    if ($type eq "ont" || $type eq "ont-r10") {
       my ($n000, $s000) = (0, 0);
       my ($n050, $s050) = (0, 0);
       my ($n100, $s100) = (0, 0);
@@ -258,7 +261,7 @@ sub displayDetails ($$$) {
         $hifiB020 / 3100000000, $hifiR020, $hifiB050 / 3100000000, $hifiR050, $hifiB080 / 3100000000, $hifiR080, $hifiB100 / 3100000000, $hifiR100;
   }
 
-  if ($type eq "ont") {
+  if ($type eq "ont" || $type eq "ont-r10" ) {
     printf "--------- --------- | --------- --------- | --------- --------- | --------- --------- |\n";
     printf "%8.3fx %9d | %8.3fx %9d | %8.3fx %9d | %8.3fx %9d |\n",
         $ontB000 / 3100000000, $ontR000, $ontB050 / 3100000000, $ontR050, $ontB100 / 3100000000, $ontR100, $ontB200 / 3100000000, $ontR200;

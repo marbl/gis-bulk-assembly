@@ -21,6 +21,7 @@ no  warnings "uninitialized";
 
 use hprc::samples;
 use hprc::aws;
+use hprc::readCorrect;
 
 require "hprc/assemble-status.pm";
 
@@ -109,6 +110,7 @@ sub computeAssembly ($$) {
   #  Check which inputs exist.
 
   my $hifi = getDownloadedFiles($samp, "hifi-cutadapt");   #  Return cutadapt form of hifi data.
+  $hifi .= " " . getCorrectedFiles($samp);
   my $nano = getDownloadedFiles($samp, "ont");
 
   my $mati = getDownloadedFiles($samp, "mat-ilmn");

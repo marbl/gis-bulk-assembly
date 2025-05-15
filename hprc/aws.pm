@@ -163,11 +163,12 @@ sub fetchData ($$$) {
   system("mkdir -p hprc-data/$samp")   if (! -d "hprc-data/$samp");
 
   foreach my $type (sort keys %$types) {
-    my $files = $samples{$samp}{$type};
+    my %fileMap = getFileMap($samp, $type, "even those that don't exist");
+    my @files = keys %fileMap; #$samples{$samp}{$type};
 
-    next  if (!defined($files));
+    next  if (!(@files));
 
-    foreach my $f (sort @$files) {
+    foreach my $f (sort @files) {
       my $awsf = $f;                                     #  So we don't accidentally corrupt the file list.
       my $locf = awsToLocalPath($samp, $f);
       #y $awso = $f =~ s!^s3://human-pangenomics/!!/r;   #  Needed for s3api.
@@ -241,6 +242,7 @@ sub getFileMap ($$@) {
   my $nonE  = shift @_;   #  return even if the file doesn't exist.
   my $hics;
   my $hici;
+  my $ontr10;
   my $subd;
 
   if      ($type eq "hic1") {       #  If asked for a specific Hi-C end, make
@@ -251,6 +253,10 @@ sub getFileMap ($$@) {
     $hics = qr/_L\d_2.fq.gz$|_R2_001.*fastq.gz$|_2.fastq.gz$/;     #  Also use 'hic' as the original type for
     $hici = qr/_L\d_1.fq.gz$|_R1_001.*fastq.gz$|_1.fastq.gz$/;     #  file discovery.
     $type = "hic";
+  }
+  if      ($type eq "ont-r10") {  # select only those read which are R10
+     $ontr10 = qr/_R1041_/;
+     $type = "ont"
   }
 
   if ($type eq "hifi-cutadapt") {   #  For processed data, look in a specific
@@ -271,6 +277,9 @@ sub getFileMap ($$@) {
     if (defined($hics)) {
       if    ($locn =~ $hici)  { next;                                  }
       elsif ($locn !~ $hics)  { die "Confused by hic name in $locn\n"; }
+    }
+    if (defined($ontr10)) {
+      if    ($locn !~ $ontr10) { next; }
     }
 
     #  If a subdirectory is specified, insert it in the path AND use whatever

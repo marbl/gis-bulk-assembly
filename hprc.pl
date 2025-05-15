@@ -24,6 +24,7 @@ use hprc::aws;
 use hprc::list;
 use hprc::readStats;
 use hprc::readFilter;
+use hprc::readCorrect;
 use hprc::status;
 use hprc::genomescope;
 use hprc::hapmers;
@@ -69,7 +70,7 @@ while (<$fh>) {
         $value =~ s/^['"]|['"]$//g;
         # Parse list if it's a list (e.g., ['a','b'])
         if ($value =~ /^\[.*\]$/) {
-		    my @list = $value =~ /['"]([^'"]+)['"]/g;  # capture the content inside single or double quotes
+            my @list = $value =~ /['"]([^'"]+)['"]/g;  # capture the content inside single or double quotes
             @list = map {
               my $item = $_;
               $item =~ s/\$root/$root/g if defined $root;
@@ -151,6 +152,7 @@ while (scalar(@ARGV) > 0) {
   #
   elsif ((($mode eq "read-stats") ||
           ($mode eq "read-filter") ||
+          ($mode eq "read-correct") ||
           ($mode eq "genomescope") ||
           ($mode eq "hapmers") ||
           ($mode eq "yakmers") ||
@@ -268,9 +270,9 @@ if (exists($readTypes{'all'})) {
   delete $readTypes{'all'};
 }
 foreach my $f (keys %readTypes) {   #  Check for invalid fetch options.
-  if (($f ne 'hifi') && ($f ne 'hifi-cutadapt') && ($f ne 'ont') &&
+  if (($f ne 'hifi') && ($f ne 'hifi-cutadapt') && ($f ne 'ont') && ($f ne 'ont-r10') &&
       ($f ne 'hic') && ($f ne 'hic1') && ($f ne 'hic2') &&
-      ($f ne 'ilmn') && 
+      ($f ne 'ilmn') &
       ($f ne 'mat-ilmn') && ($f ne 'pat-ilmn')) {
     delete $readTypes{$_}  foreach qw(hifi ont hic ilmn mat-ilmn pat-ilmn);
     push @errs, "Invalid '$mode' types '" . join("', '", sort keys %readTypes) . "'.";
@@ -292,6 +294,7 @@ if (($mode ne "help") &&
     ($mode ne "fetch") &&
     ($mode ne "read-stats") &&
     ($mode ne "read-filter") &&
+    ($mode ne "read-correct") &&
     ($mode ne "genomescope") &&
     ($mode ne "hapmers") &&
     ($mode ne "yakmers") &&
@@ -368,7 +371,13 @@ elsif ($mode eq "read-stats") {
 
 elsif ($mode eq "read-filter") {
   foreach my $s (sort keys %sampleList) {
-    filterReads($s, \%readTypes, ,\%opts);
+    filterReads($s, \%readTypes,\%opts);
+  }
+}
+
+elsif ($mode eq "read-correct") {
+  foreach my $s (sort keys %sampleList) {
+    correctReads($s, \%opts);
   }
 }
 
