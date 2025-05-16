@@ -24,7 +24,8 @@ use hprc::samples;
 
 #
 #  Converts an s3 path to a local filesystem (relative) path, the first
-#  for data files, the second for info files.
+#  for data files, the second for info files. Also handles ftp paths from
+#  the sra and paths on the local server but outside the assembly workspace.
 #    Data files are in 'hprc-data/$samp/'.
 #    Info files are in 'hprc-cache/aws/$samp/' and have '.s3ls' appended.
 #
@@ -37,11 +38,20 @@ sub awsToLocalPath ($$@) {
   my $strip = shift @_;
 
   $locf =~ s!/!--!g;
-  $locf =~ s!^s3:----human-pangenomics--\w+--!hprc-data/$samp/!;
-  # for s3 paths not from human-pangenomics bucket
-  $locf =~ s!^s3:----!hprc-data/$samp/!;
-  # for ftp links from sra.ebi.ac.uk
-  $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-data/$samp/!;
+
+  if ($locf =~ /^s3:/) {
+    $locf =~ s!^s3:----human-pangenomics--\w+--!hprc-data/$samp/!;
+      # for s3 paths not from human-pangenomics bucket
+      $locf =~ s!^s3:----!hprc-data/$samp/!;
+  }
+  elsif ($locf =~ /^ftp:/) {
+      # for ftp links from sra.ebi.ac.uk
+      $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-data/$samp/!;
+  }
+  elsif ($locf =~ /^local:/) {
+      $locf =~ s!^.*--!hprc-data/$samp/!;
+  }
+
   $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
 
   return("$root/$locf");
@@ -52,11 +62,18 @@ sub awsToLocalInfo ($$) {
   my $info  = shift @_;
 
   $info =~ s!/!--!g;
-  $info =~ s!^s3:----human-pangenomics--\w+--!hprc-cache/aws/$samp/!;
-  # for s3 paths not from human-pangenomics bucket
-  $info =~ s!^s3:----!hprc-cache/aws/$samp/!;
-  # for ftp links from sra.ebi.ac.uk
-  $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-cache/aws/$samp/!;
+  if ($info =~ /^s3:/) {
+    $info =~ s!^s3:----human-pangenomics--\w+--!hprc-cache/aws/$samp/!;
+    # for s3 paths not from human-pangenomics bucket
+    $info =~ s!^s3:----!hprc-cache/aws/$samp/!;
+  }
+  elsif ($info =~ /^ftp:/) {
+    # for ftp links from sra.ebi.ac.uk
+    $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-cache/aws/$samp/!;
+  }
+  elsif ($info =~ /^local:/) {
+    $info =~ s!^.*--!hprc-cache/aws/$samp/!;
+  }
   $info .= ".s3ls";
 
   return($info);
@@ -107,6 +124,18 @@ sub fetchInfo ($$) {
       my $formatted_date = `date -d "$last_modified" "+%Y-%m-%d %H:%M:%S"`;
       chomp($formatted_date);
       print $o "$formatted_date\t$size\t$file\n";
+      close $o;
+    } elsif ($file =~ /^local/) {
+      my $localfile = $file;
+      $localfile =~ s:^local\:/+:/:;
+      # use ls to get last modified date and size
+      my $ls_output=`ls -l --full-time $file 2> $info.err`;
+      my @ls_fields = split /\s/, $ls_output;
+      my $size = $ls_fields[4];
+      my $fulldate = "$ls_fields[5] $ls_fields[6]";
+      $fulldate =~ s/\..*//;
+      open my $o, ">", $info;
+      print $o "$fulldate\t$size\t$file\n";
       close $o;
     } else {
        die "Unknown file type $file\n"
@@ -169,6 +198,7 @@ sub fetchData ($$$) {
     next  if (!(@files));
 
     foreach my $f (sort @files) {
+      # "AWS" name could also be an ftp path ("ftp://") or a local path ("local://")
       my $awsf = $f;                                     #  So we don't accidentally corrupt the file list.
       my $locf = awsToLocalPath($samp, $f);
       #y $awso = $f =~ s!^s3://human-pangenomics/!!/r;   #  Needed for s3api.
@@ -186,7 +216,7 @@ sub fetchData ($$$) {
 
       printf "%7s/%-9s FETCH  - %s\n", $samp, "$type:", $locf;
 
-      if (system("aws --version > /dev/null 2>&1") != 0) {
+      if (($awsf =~ /^s3/) && (system("aws --version > /dev/null 2>&1") != 0)) {
         die "aws failed to run; probably need 'module load aws'.\n";
       }
 
@@ -198,6 +228,9 @@ sub fetchData ($$$) {
         $c = "aws --no-sign-request s3 cp --only-show-errors '$awsf' '$locf' > $locf.err 2>&1";
       } elsif ($awsf =~ /^ftp/) {
         $c = "curl -f -o '$locf' '$awsf' > $locf.err 2>&1";
+      } elsif ($awsf =~ /^local/) {
+        $awsf =~ s:^local\:/+:/:;
+	$c = "ln -sf '$awsf' '$locf' > $locf.err 2>&1";
       } else {
         print "Download requested unknown file type $awsf\n";
         exit(1);
