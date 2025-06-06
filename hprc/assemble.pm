@@ -121,12 +121,15 @@ sub computeAssembly ($$) {
 
   my $params = getParameters($samp);
 
-  my $hifiMissing   =  (($hifi eq "") && (numFiles($samp, "hifi")     > 0));
-  my $nanoMissing   =  (($nano eq "") && (numFiles($samp, "ont")      > 0));
-  my $trioMissing   = ((($mati eq "") && (numFiles($samp, "mat-ilmn") > 0)) ||
-                       (($pati eq "") && (numFiles($samp, "pat-ilmn") > 0)));
-  my $hicMissing    = ((($hic1 eq "") && (numFiles($samp, "hic")      > 0)) ||
-                       (($hic2 eq "") && (numFiles($samp, "hic")      > 0)));
+  my $hifiMissing   =  (($hifi eq "") && (numFiles($samp, "hifi-cutadapt") > 0) ||
+                       scalar(split ' ', $hifi) < numFiles($samp, "hifi-cutadapt"));
+  my $nanoMissing   =  (($nano eq "") && (numFiles($samp, "ont")           > 0) ||
+                       scalar(split ' ', $nano) < numFiles($samp, "ont"));
+  my $trioMissing   = ((($mati eq "") && (numFiles($samp, "mat-ilmn")      > 0)) ||
+                       (($pati eq "") && (numFiles($samp, "pat-ilmn")      > 0)));
+  my $hicMissing    = ((($hic1 eq "") && (numFiles($samp, "hic")           > 0)) ||
+                       (($hic2 eq "") && (numFiles($samp, "hic")           > 0)) ||
+					   (scalar(split ' ', $hic1) + scalar(split ' ', $hic2) < numFiles($samp, "hic")));
   my $hapmerMissing = locateHapmers($samp);
 
   my $tu  = ((numFiles($samp, "mat-ilmn") == 0) || (numFiles($samp, "pat-ilmn") == 0));
