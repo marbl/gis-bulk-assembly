@@ -79,12 +79,13 @@ sub filterHiFi ($$$$$$$) {
     print CMD " - \\\n";
     print CMD "| \\\n";
     print CMD "pigz \$zipOpt -p \$zipCPUs \\\n";
-    print CMD " > '$onam.fasta.gz' \\\n";
+    print CMD " > '$onam.WORKING.fasta.gz' \\\n";
     print CMD "\n";
     print CMD "if [ $? != 0 ] ; then\n";
     print CMD "  echo 'Failed!'\n";
-    print CMD "  rm $onam.fasta.gz\n";
+    print CMD "  rm $onam.WORKING.fasta.gz\n";
     print CMD "else\n";
+    print CMD "  mv $onam.WORKING.fasta.gz $onam.fasta.gz\n";
     print CMD "  rm $onam.err\n";
     print CMD "fi\n";
     print CMD "\n";
