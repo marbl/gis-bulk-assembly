@@ -40,21 +40,26 @@ sub awsToLocalPath ($$@) {
   $locf =~ s!/!--!g;
 
   if ($locf =~ /^s3:/) {
-    $locf =~ s!^s3:----human-pangenomics--\w+--!hprc-data/$samp/!;
-      # for s3 paths not from human-pangenomics bucket
-      $locf =~ s!^s3:----!hprc-data/$samp/!;
+    $locf =~ s!^s3:----human-pangenomics--\w+--!!;
+    # for s3 paths not from human-pangenomics bucket
+    $locf =~ s!^s3:----!/!;
   }
   elsif ($locf =~ /^ftp:/) {
-      # for ftp links from sra.ebi.ac.uk
-      $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-data/$samp/!;
+    # for ftp links from sra.ebi.ac.uk
+    $locf =~ s!^ftp:----ftp.sra.ebi.ac.uk--!!;
+    #for ftp links from 1000genomes
+    $locf =~ s!^ftp:----ftp.1000genomes.ebi.ac.uk--!!;
   }
   elsif ($locf =~ /^local:/) {
-      $locf =~ s!^.*--!hprc-data/$samp/!;
+    $locf =~ s!^.*--!!;
   }
 
+  $locf = (length($locf)) > 255-10 ? substr($locf, length($locf)-255+10, 255) : $locf;
+  $locf = "$data/$samp/$locf";
   $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
+  die "Error: path $locf is too long" if length($locf) > 4096;
 
-  return("$root/$locf");
+  return("$locf");
 }
 
 sub awsToLocalInfo ($$) {
@@ -63,18 +68,25 @@ sub awsToLocalInfo ($$) {
 
   $info =~ s!/!--!g;
   if ($info =~ /^s3:/) {
-    $info =~ s!^s3:----human-pangenomics--\w+--!hprc-cache/aws/$samp/!;
+    $info =~ s!^s3:----human-pangenomics--\w+--!!;
     # for s3 paths not from human-pangenomics bucket
-    $info =~ s!^s3:----!hprc-cache/aws/$samp/!;
+    $info =~ s!^s3:----!!;
   }
   elsif ($info =~ /^ftp:/) {
     # for ftp links from sra.ebi.ac.uk
-    $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!hprc-cache/aws/$samp/!;
+    $info =~ s!^ftp:----ftp.sra.ebi.ac.uk--!!;
+    # for ftp links from 1000genomes
+    $info =~ s!^ftp:----ftp.1000genomes.ebi.ac.uk--!!;
   }
   elsif ($info =~ /^local:/) {
-    $info =~ s!^.*--!hprc-cache/aws/$samp/!;
+    $info =~ s!^.*--!!;
   }
+
+  # leave space to append .s3ls.err to the filename
+  $info = (length($info))     > 255-10 ? substr($info, 0, 255-10) : $info;
+  $info = "hprc-cache/aws/$samp/$info";
   $info .= ".s3ls";
+  die "Error: path $info is too long" if length($info) > 4096;
 
   return($info);
 }
@@ -86,6 +98,7 @@ sub awsToLocalName ($$@) {
 
   $name =~ s!/!--!g;    #  Replace /'s by --'s.
   $name =~ s!^.*--!!;   #  Delete everything up to the LAST --.
+  die "Error: filename path $name is too long" if length($name) > 255;
   $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
 
   return($name);
@@ -189,7 +202,7 @@ sub fetchData ($$$) {
   my $types = shift @_;
   my $opts  = shift @_;
 
-  system("mkdir -p hprc-data/$samp")   if (! -d "hprc-data/$samp");
+  system("mkdir -p $data/$samp")   if (! -d "$data/$samp");
 
   foreach my $type (sort keys %$types) {
     my %fileMap = getFileMap($samp, $type, "even those that don't exist");
@@ -211,7 +224,7 @@ sub fetchData ($$$) {
      my $loccut = awsToLocalPath("$samp/hifi-cutadapt", $f, 1) . ".fasta.gz";
      if (-e $loccut ) {
         printf "%7s/%-9s EXISTS CUTADAPT - %s\n", $samp, "$type:", $loccut;
-       next;
+        next;
      }
 
       printf "%7s/%-9s FETCH  - %s\n", $samp, "$type:", $locf;
@@ -230,7 +243,7 @@ sub fetchData ($$$) {
         $c = "curl -f -o '$locf' '$awsf' > $locf.err 2>&1";
       } elsif ($awsf =~ /^local/) {
         $awsf =~ s:^local\:/+:/:;
-	$c = "ln -sf '$awsf' '$locf' > $locf.err 2>&1";
+        $c = "ln -sf '$awsf' '$locf' > $locf.err 2>&1";
       } else {
         print "Download requested unknown file type $awsf\n";
         exit(1);

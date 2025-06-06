@@ -29,7 +29,7 @@ my $meryl       = "$root/software/meryl/build/bin/meryl";
 sub computeGenomescope ($$) {
   my $samp  = shift @_;
   my $opts  = shift @_;
-  my $geno  = "$root/hprc-data/$samp/genomescope";
+  my $geno  = "$data/$samp/genomescope";
   my $locd  = "/lscratch/\$SLURM_JOB_ID";
 
   #  Fail early if genomescope isn't available.

@@ -96,8 +96,8 @@ sub displaySummary ($$$) {
   my ($MhetMin, $MhetMax) = ( 0, 1 );
   my ($PhetMin, $PhetMax) = ( 0, 1 );
 
-  if (-e "$root/hprc-data/$samp/genomescope/hifi/summary.txt") {
-    open(GS, "< $root/hprc-data/$samp/genomescope/hifi/summary.txt") or die "Failed to open 'hprc-data/$samp/genomescope/hifi/summary.txt' for reading: $!\n";
+  if (-e "$data/$samp/genomescope/hifi/summary.txt") {
+    open(GS, "< $data/$samp/genomescope/hifi/summary.txt") or die "Failed to open '$data/$samp/genomescope/hifi/summary.txt' for reading: $!\n";
     while (<GS>) {
       if (m/Heterozygous\s+\(ab\)\s+(\d+.\d+)%\s+(\d+.\d+)%/) {
         $HhetMin = $1;
@@ -106,8 +106,8 @@ sub displaySummary ($$$) {
     }
     close(GS);
   }
-  if (-e "$root/hprc-data/$samp/genomescope/ilmn/summary.txt") {
-    open(GS, "< $root/hprc-data/$samp/genomescope/ilmn/summary.txt") or die "Failed to open 'hprc-data/$samp/genomescope/ilmn/summary.txt' for reading: $!\n";
+  if (-e "$data/$samp/genomescope/ilmn/summary.txt") {
+    open(GS, "< $data/$samp/genomescope/ilmn/summary.txt") or die "Failed to open '$data/$samp/genomescope/ilmn/summary.txt' for reading: $!\n";
     while (<GS>) {
       if (m/Heterozygous\s+\(ab\)\s+(\d+.\d+)%\s+(\d+.\d+)%/) {
         $IhetMin = $1;
@@ -116,8 +116,8 @@ sub displaySummary ($$$) {
     }
     close(GS);
   }
-  if (-e "$root/hprc-data/$samp/genomescope/mati/summary.txt") {
-    open(GS, "< $root/hprc-data/$samp/genomescope/mati/summary.txt") or die "Failed to open 'hprc-data/$samp/genomescope/mati/summary.txt' for reading: $!\n";
+  if (-e "$data/$samp/genomescope/mati/summary.txt") {
+    open(GS, "< $data/$samp/genomescope/mati/summary.txt") or die "Failed to open '$data/$samp/genomescope/mati/summary.txt' for reading: $!\n";
     while (<GS>) {
       if (m/Heterozygous\s+\(ab\)\s+(\d+.\d+)%\s+(\d+.\d+)%/) {
         $MhetMin = $1;
@@ -126,8 +126,8 @@ sub displaySummary ($$$) {
     }
     close(GS);
   }
-  if (-e "$root/hprc-data/$samp/genomescope/pati/summary.txt") {
-    open(GS, "< $root/hprc-data/$samp/genomescope/pati/summary.txt") or die "Failed to open 'hprc-data/$samp/genomescope/pati/summary.txt' for reading: $!\n";
+  if (-e "$data/$samp/genomescope/pati/summary.txt") {
+    open(GS, "< $data/$samp/genomescope/pati/summary.txt") or die "Failed to open '$data/$samp/genomescope/pati/summary.txt' for reading: $!\n";
     while (<GS>) {
       if (m/Heterozygous\s+\(ab\)\s+(\d+.\d+)%\s+(\d+.\d+)%/) {
         $PhetMin = $1;

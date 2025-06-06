@@ -29,7 +29,7 @@ sub getCorrectedFiles($) {
   my $type   = 'ont-r10';
   my %files = getFileMap($samp, $type, 1);
   my $input = scalar(keys %files);
-  my $expected = "$root/hprc-data/$samp/ont-hifiasm-correct/r10-hifiasm-correct.ec.fq.gz";
+  my $expected = "$data/$samp/ont-hifiasm-correct/r10-hifiasm-correct.ec.fq.gz";
 
   return (-e $expected && $input > 0) ? "$expected" : "";
 }
@@ -116,7 +116,7 @@ sub correctReads ($$) {
 
   my %files = getFileMap($samp, $type, 1);
   my $input = scalar(keys %files);
-  my $idir = "$root/hprc-data/$samp/";
+  my $idir = "$data/$samp/";
   my @missing = grep { ! -e $_ } (values %files);
   if ($input == 0)  {   print "$samp - NO APPROPRIATE READ TYPE FOUND - CHECK FOR '$type' DATA\n";}
   elsif (@missing)  {   foreach my $missing (@missing) { print "$samp - NOT-FETCHED      - $missing\n"; } }

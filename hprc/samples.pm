@@ -14,7 +14,7 @@ require Exporter;
 use FindBin;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(makeAbsolute getParameters loadSamples numFiles dataAvailable $root $rasm $rsoft $refn $refc $odb %samples);
+@EXPORT = qw(makeAbsolute getParameters loadSamples numFiles dataAvailable $root $data $rasm $rsoft $refn $refc $odb %samples);
 
 use strict;
 use warnings "all";
@@ -24,7 +24,8 @@ no  warnings "uninitialized";
 
 our $root  = $FindBin::Bin;    #"/data/Phillippy2/projects/hprc-assemblies";
 our $rasm  = "/invalid/path";  # now set in main; "/data/Phillippy2/projects/hprc-assemblies/assemblies-v3";
-our $rsoft = "/invalid/path";  # now set tin main;
+our $rsoft = "/invalid/path";  # now set in main;
+our $data  = "/invalid/path";  # now set in main;
 our $refn  = "/invalid/path";  # the reference non-HPC
 our $refc  = "/invalid/path";  # the reference HPC
 our $odb   = "/invalid/path";  # the ODB database to use (e.g. primates_odb10)

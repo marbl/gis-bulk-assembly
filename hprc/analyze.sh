@@ -24,23 +24,28 @@ trap "rm -f analysis.jid" EXIT
 cpus=$SLURM_CPUS_PER_TASK
 scontrol update JobName=va$1 JobId=$SLURM_JOB_ID
 
-if [ -n "$HPRC_ROOT_REFERENCE" ]; then
-   refn=$HPRC_ROOT_REFERENCE
-   refc=$HPRC_ROOT_REFERENCE_HPC
-   odb=$HPRC_ROOT_REFERENCE_ODB
-else
-   refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
-   refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
-   odb="primates_odb10"
-fi
-marbl_utils="/data/korens/devel/marbl_utils"
-
-samp=$1
 if [ -n "$HPRC_ROOT" ]; then
    root=$HPRC_ROOT
 else
    root="/data/Phillippy2/projects/hprc-assemblies"
 fi
+
+if [ -n "$HPRC_ROOT_REFERENCE" ]; then
+   rsoft=$HPRC_ROOT_SOFTWARE
+   refn=$HPRC_ROOT_REFERENCE
+   refc=$HPRC_ROOT_REFERENCE_HPC
+   odb=$HPRC_ROOT_REFERENCE_ODB
+   data=$HPRC_ROOT_DATA
+else
+   rsoft="$root/software"
+   refn="/data/Phillippy/t2t-share/assemblies/release/v2.0/chm13v2.0.fasta"
+   refc="/data/korens/devel/sg_sandbox/resources/reference.compressed.fasta"
+   odb="primates_odb10"
+   data="$root/hprc-data"
+fi
+marbl_utils="/data/korens/devel/marbl_utils"
+
+samp=$1
 echo "Root: '$root'"
 echo "Ref: '$refn' and '$refc'"
 echo "odb: '$odb'"
@@ -73,8 +78,8 @@ if [ ! -e assembly.homopolymer-compressed.add_telo.noseq.gfa ]; then
    repeatUnit="/data/Phillippy/references/hg38/rDNA_compressed.fasta"
    cat ../assembly.homopolymer-compressed.gfa |awk '{if (match($1, "^S")) { print ">"$2; print $3}}' | mash sketch -i - -o sketch.msh
    mash screen sketch.msh $repeatUnit | awk '{if ($1 > 0.9 && $4 < 0.05) print $NF}' > rdna.nodes
-   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
-   python $root/software-v4/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $rsoft/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
+   python $rsoft/verkko/lib/verkko/scripts/remove_nodes_add_telomere.py -r rdna.nodes -t assembly.telomere.bed -g ../assembly.homopolymer-compressed.noseq.gfa -s ../assembly.scfmap -p ../assembly.paths.tsv -o assembly.homopolymer-compressed.add_telo_remove_rdna.noseq.gfa -c assembly.colors.add_telo_add_rdna.csv
    rm -f ./assembly.colors.csv
 fi
 
@@ -210,7 +215,7 @@ rm -f tmp tmp? tmp.gfa
 # this is chromosome assignment
 isXY=`grep chrY translation_hap* |wc -l |awk '{print $1}'`
 if [ $isXY -ne 0 ]; then
-   yak sexchr -t 8 $root/hprc-data/chrY-no-par.yak $root/hprc-data/chrX-no-par.yak $root/hprc-data/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
+   yak sexchr -t 8 $root/software/yak/chrY-no-par.yak $root/software/yak/chrX-no-par.yak $root/software/yak/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
 fi
 
 if [ ! -e assembly.refOriented.fasta ]; then
@@ -227,11 +232,11 @@ if [ ! -e assembly.refOriented.fasta ]; then
          if [ $parent = "mat" ]; then
            cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
            cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > include.tmp
-           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
+           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp || true
          elif [ $parent = "pat" ]; then
            cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > ignore.tmp
            cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > include.tmp
-           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp
+           grep -w -f include.tmp assembly-ref.reorient.tsv > tmp || true
          fi
 	  else
 	     touch ./ignore.tmp
@@ -294,14 +299,14 @@ done
 
 
 for asm in assembly assembly.haplotype1 assembly.haplotype2 ; do
-    if [ ! -e $asm.yak.qv -a -e $root/hprc-data/$samp/yakmers/ilmn.yak ] ; then
-        yak qv       -t $cpus -l 100000 $root/hprc-data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
+    if [ ! -e $asm.yak.qv -a -e $data/$samp/yakmers/ilmn.yak ] ; then
+        yak qv       -t $cpus -l 100000 $data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
     else
         touch $asm.yak.qv.NO_ILMN_DATA
     fi
-    if [ ! -e $asm.yak.trioeval -a -e $root/hprc-data/$samp/yakmers/mati.yak -a -e $root/hprc-data/$samp/yakmers/pati.yak ] ; then
-        yak trioeval -t $cpus           $root/hprc-data/$samp/yakmers/mati.yak \
-                                        $root/hprc-data/$samp/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
+    if [ ! -e $asm.yak.trioeval -a -e $data/$samp/yakmers/mati.yak -a -e $data/$samp/yakmers/pati.yak ] ; then
+        yak trioeval -t $cpus           $data/$samp/yakmers/mati.yak \
+                                        $data/$samp/yakmers/pati.yak ../$asm.fasta > $asm.yak.trioeval
     else
         touch $asm.yak.trioeval.NO_MATI_or_PATI_DATA
     fi

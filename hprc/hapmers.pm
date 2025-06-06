@@ -27,7 +27,7 @@ my $meryl = "$root/software/meryl/build/bin/meryl";
 sub computeHapmers ($$) {
   my $samp = shift @_;
   my $opts = shift @_;
-  my $hapo   = "$root/hprc-data/$samp/hapmers";
+  my $hapo   = "$data/$samp/hapmers";
   my $locd  = "/lscratch/\$SLURM_JOB_ID";
 
   #  Decide which mers we can compute.  Only child, only parent, or both?

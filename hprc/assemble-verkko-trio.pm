@@ -12,8 +12,8 @@
 
 sub locateHapmers ($) {     #  In array context, returns the expected locations of the two hapmer
   my $samp  = shift @_;     #  databases.  In scalar context, returns false/true if those exist.
-  my $mati  = "$root/hprc-data/$samp/hapmers/mati.hapmers.meryl";
-  my $pati  = "$root/hprc-data/$samp/hapmers/pati.hapmers.meryl";
+  my $mati  = "$data/$samp/hapmers/mati.hapmers.meryl";
+  my $pati  = "$data/$samp/hapmers/pati.hapmers.meryl";
   my $missi = ((! -e "$mati/merylIndex") ||
                (! -e "$pati/merylIndex"));
 

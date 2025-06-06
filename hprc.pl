@@ -108,6 +108,7 @@ while (scalar(@ARGV) > 0) {
       }
       $rasm  = makeAbsolute($vars{rasm}) or die "No assembly output defined for $v\n";
       $rsoft = makeAbsolute($vars{rsoft}) or die "No software defined for $v\n";
+      $data  = makeAbsolute($vars{data}) or die "No data location defined for $v\n";
       $refn  = makeAbsolute($vars{refn}) or die "No reference defined for $v\n";
       $refc  = makeAbsolute($vars{refc}) or die "No reference (HPC) defined for $v\n";
       $odb   = $vars{odb} or die " No ODB database defined for $v\n";
@@ -121,7 +122,9 @@ while (scalar(@ARGV) > 0) {
       $ENV{'HPRC_ROOT_REFERENCE'}     = "$refn";
       $ENV{'HPRC_ROOT_REFERENCE_HPC'} = "$refc";
       $ENV{'HPRC_ROOT_REFERENCE_ODB'} = "$odb";
+      $ENV{'HPRC_ROOT_DATA'}          = "$data";
 
+      print STDERR "Data:         $data\n";
       print STDERR "Software:     $rsoft\n";
       print STDERR "Output asm:   $rasm\n";
       print STDERR "Ref:          $refn\n";

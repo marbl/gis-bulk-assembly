@@ -66,7 +66,7 @@ sub startChromosomeAssignment ($$) {
     print CMD "\n";
     print CMD "if [ ! -e asm-chr.mashmap.out ] ; then\n";
     print CMD "  mashmap \\\n";
-    print CMD "    --ref /data/Phillippy/references/T2T-CHM13/chm13v2.0.fa \\\n";
+    print CMD "    --ref $refn \\\n";
     print CMD "    --query ../assembly.fasta \\\n";
     print CMD "    --perc_identity 95 \\\n";
     print CMD "    --segLength 100000 \\\n";
@@ -127,7 +127,7 @@ sub startTelomereAnalysis ($$) {
   elsif ($unavail)                    { print "$samp/$flav/analysis   - UNAVAILABLE ($unavail)\n"; }
   elsif (! $ready)                    { print "$samp/$flav/analysis   - ASSEMBLY-NOT-READY\n"; }
   elsif (! $$opts{"submit"})          { print "$samp/$flav/analysis   - READY-TO-COMPUTE\n"; }
-  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -J va$samp -D $diro --export=HPRC_ROOT=$root,HPRC_ROOT_REFERENCE=$refn,HPRC_ROOT_REFERENCE_HPC=$refc,HPRC_ROOT_REFERENCE_ODB=$odb $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
+  else                                { print "$samp/$flav/analysis   - SUBMITTED\n"; system("sbatch -J va$samp -D $diro --export=HPRC_ROOT=$root,HPRC_ROOT_DATA=$data,HPRC_ROOT_SOFTWARE=$rsoft,HPRC_ROOT_REFERENCE=$refn,HPRC_ROOT_REFERENCE_HPC=$refc,HPRC_ROOT_REFERENCE_ODB=$odb $root/hprc/analyze.sh $samp > $diro/analysis.jid"); }
 }
 
 1;

@@ -72,7 +72,7 @@ sub computeYakmers ($$) {
   my $samp = shift @_;
   my $opts = shift @_;
   my $subm = exists($$opts{"submit"});
-  my $yako = "$root/hprc-data/$samp/yakmers";   #  Yakko waves to Wakko and Dot.
+  my $yako = "$data/$samp/yakmers";   #  Yakko waves to Wakko and Dot.
 
   #  Decide which mers we can compute.  Only child, only parent, or both?
 
