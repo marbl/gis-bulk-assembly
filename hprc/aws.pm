@@ -118,7 +118,6 @@ sub fetchInfo ($$) {
   my $info = awsToLocalInfo($samp, $file);
 
   if (! -e "$info") {
-    print STDERR "  Fetch AWS ls for $file.\n";
     if (system("aws --version > /dev/null 2>&1") != 0) {
       die "aws failed to run; probably need 'module load aws'.\n";
     }
@@ -369,7 +368,7 @@ sub getDownloadedFiles ($$) {
   my %m = getFileMap($samp, $type);
 
   foreach my $f (values %m) {    #  Check that each files exists;
-    return ""   if (! -e $f);    #  if not, return empty string.
+    return ""   if (! -e $f || -e "$f.err");    #  if not, return empty string.
   }
 
   return join " ", sort values %m;
