@@ -33,6 +33,9 @@ require "hprc/assemble-verkko-trio.pm";
 require "hprc/assemble-verkko-hi-c.pm";
 require "hprc/assemble-verkko-thic.pm";
 
+require "hprc/assemble-hifiasm-hi-c.pm";
+require "hprc/assemble-hifiasm-trio.pm";
+
 require "hprc/assemble-cleanup.pm";
 require "hprc/assemble-archive.pm";
 
@@ -129,8 +132,9 @@ sub computeAssembly ($$) {
                        (($pati eq "") && (numFiles($samp, "pat-ilmn")      > 0)));
   my $hicMissing    = ((($hic1 eq "") && (numFiles($samp, "hic")           > 0)) ||
                        (($hic2 eq "") && (numFiles($samp, "hic")           > 0)) ||
-					   (scalar(split ' ', $hic1) + scalar(split ' ', $hic2) < numFiles($samp, "hic")));
+                       (scalar(split ' ', $hic1) + scalar(split ' ', $hic2) < numFiles($samp, "hic")));
   my $hapmerMissing = locateHapmers($samp);
+  my $yakmerMissing = locateYakmers($samp);
 
   my $tu  = ((numFiles($samp, "mat-ilmn") == 0) || (numFiles($samp, "pat-ilmn") == 0));
   my $hu  =  (numFiles($samp, "hic")      == 0);
@@ -187,6 +191,20 @@ sub computeAssembly ($$) {
     push @m, "trio"              if ($trioMissing);
     $missingCT = combine(@m);
   }
+  if ($flav eq "hifiasm-hi-c") {
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    push @m, "hic"               if ($hicMissing);
+    $missingC = combine(@m);
+  }
+  if ($flav eq "hifiasm-trio") {
+    my @m;
+    push @m, "hifi-cutadapt"     if ($hifiMissing);
+    push @m, "ont"               if ($nanoMissing);
+    push @m, "yakmer databases"  if ($yakmerMissing);
+    $missingC = combine(@m);
+  }
   if (($flav eq "verkko-base") || ($flav eq "verkko-full")) {
     my @m;
     push @m, "hifi-cutadapt"     if ($hifiMissing);
@@ -239,6 +257,8 @@ sub computeAssembly ($$) {
 
   if (($flav ne "canu-hifi")   &&
       ($flav ne "canu-trio")   &&
+      ($flav ne "hifiasm-hi-c")&&
+      ($flav ne "hifiasm-trio")&&
       ($flav ne "verkko-base") &&
       ($flav ne "verkko-trio") &&
       ($flav ne "verkko-hi-c") &&
@@ -270,6 +290,9 @@ sub computeAssembly ($$) {
 
     if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl, $params); }
     if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl, $params); }
+
+    if ($flav eq "hifiasm-trio") { $scr = createHifiasmTrio ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl, $params); }
+    if ($flav eq "hifiasm-hi-c") { $scr = createHifiasmHiC  ($samp, $hifi, $nano, $hic1, $hic2, $missing, $unavail = $unavailH, $compl, $params); }
 
     if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl, $params); }
     if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl, $params); }   #  Trio DBs implicitly exist.

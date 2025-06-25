@@ -50,7 +50,7 @@ echo "Root: '$root'"
 echo "Ref: '$refn' and '$refc'"
 echo "odb: '$odb'"
 base=`pwd`
-base=`dirname $base |awk -F "/" '{print $NF}' |sed s/hi-c-test/base/g | sed s/hi-c/base/g |sed s/trio/base/g |sed s/thic/base/g`
+base=`dirname $base |awk -F "/" '{print $NF}' |sed s/verkko-hi-c-test/verkko-base/g | sed s/verkko-hi-c/verkko-base/g |sed s/verkko-trio/verkko-base/g |sed s/verkko-thic/verkko-base/g`
 
 compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`

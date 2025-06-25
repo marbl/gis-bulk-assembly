@@ -44,6 +44,8 @@ sub cleanupAssembly ($$) {
   my $fintrio = isFinished($samp, "verkko-trio") || !$ta;  #  Trio is finished if it is finished or not available.
   my $finhic  = isFinished($samp, "verkko-hi-c") || !$ha;  #  Hi-C ... same
   my $finthic = isFinished($samp, "verkko-thic") || !$th;
+  my $finhifiasmhic  = isFinished($samp, "hifiasm-hi-c") || !$ha;
+  my $finhifiasmtrio = isFinished($samp, "hifiasm-trio") || !$ta;
 
   if (($$opts{"flavor"} ne "") && ($$opts{"flavor"} ne "verkko-full")) {
     push @flavs, $$opts{"flavor"};
@@ -69,7 +71,9 @@ sub cleanupAssembly ($$) {
     if ((($flav eq "verkko-base") && (!$finbase)) ||
         (($flav eq "verkko-trio") && (!$fintrio)) ||
         (($flav eq "verkko-hi-c") && (!$finhic)) ||
-        (($flav eq "verkko-thic") && (!$finthic))) {
+        (($flav eq "verkko-thic") && (!$finthic)) ||
+		(($flav eq "hifiasm-hi-c") && (!$finhifiasmhic)) ||
+		(($flav eq "hifiasm-trio") && (!$finhifiasmtrio))) {
       print " - INCOMPLETE.\n";
       next;
     }
@@ -178,6 +182,10 @@ sub cleanupAssembly ($$) {
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.sa")   { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.sa"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta")      { system("pigz $dirn/8-hicPipeline/unitigs.fasta"); }
     if (-e "$dirn/8-hicPipeline/paths.hpc.fasta")    { system("rm -f $dirn/8-hicPipeline/paths.hpc.fasta"); }
+
+    foreach my $f (glob("$dirn/*.bin")) {
+       system("rm -f $f");
+    }
 
     printf " - AFTER: ";   my $after = getDirectorySize($dirn);
     printf "%6.1fGB (%.3f%%)\n", $after, 100.0 * ($before > 0 ? $after / $before : 1);

@@ -103,8 +103,10 @@ sub isFinished ($$) {
          ($flav eq "verkko-hi-c") ||
          ($flav eq "verkko-thic")) {
     $fini = 1   if (-e "$dirn/$flav/assembly.fasta") || (-e "$dirn/$flav/assembly.fasta.gz");
+  } elsif (($flav eq "hifiasm-hi-c") ||
+           ($flav eq "hifiasm-trio")) {
+    $fini = 1   if (-e "$dirn/$flav/assembly.fasta") || (-e "$dirn/$flav/assembly.fasta.gz");
   }
-
   return $fini;
 }
 
