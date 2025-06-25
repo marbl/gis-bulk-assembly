@@ -118,7 +118,7 @@ sub fetchInfo ($$) {
   my $info = awsToLocalInfo($samp, $file);
 
   if (! -e "$info") {
-    if (system("aws --version > /dev/null 2>&1") != 0) {
+    if (($file =~ /^s3/) && system("aws --version > /dev/null 2>&1") != 0) {
       die "aws failed to run; probably need 'module load aws'.\n";
     }
     system("mkdir -p hprc-cache/aws/$samp")    if (! -d "hprc-cache/aws/$samp");
