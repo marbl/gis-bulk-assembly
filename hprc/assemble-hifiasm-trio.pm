@@ -19,16 +19,17 @@ sub locateYakmers ($) {     #  In array context, returns the expected locations 
   return wantarray() ? ($mati, $pati) : $missi;
 }
 
-sub createHifiasmTrio ($$$$$$$) {
-  my $samp  = shift @_;
-  my $flav  = "hifiasm-trio";
-  my $hifi  = shift @_;
-  my $nano  = shift @_;
-  my $missi = shift @_;
-  my $unava = shift @_;
-  my $compl = shift @_;
-  my $params= shift @_;
-  my $sdir  = "$rasm/$samp";
+sub createHifiasmTrio ($$$$$$$$$) {
+  my $samp    = shift @_;
+  my $flav    = shift @_;
+  my $hifi    = shift @_;
+  my $nano    = shift @_;
+  my $nanoR10 = shift @_;
+  my $missi   = shift @_;
+  my $unava   = shift @_;
+  my $compl   = shift @_;
+  my $params  = shift @_;
+  my $sdir    = "$rasm/$samp";
 
   # hifiasm wants UL and HiC data to be comma-separated (but not hifi)
   $nano =~ s/ /,/g;
@@ -66,12 +67,16 @@ sub createHifiasmTrio ($$$$$$$) {
     print CMD "\n";
     print CMD "#\n";
     print CMD "if [ ! -e \"$flav/hifiasm.complete\" ]; then\n";
-    print CMD "  $rsoft/hifiasm/hifiasm -d $flav/assembly \\\n";
+    print CMD "  $rsoft/hifiasm/hifiasm -o $flav/assembly \\\n";
     print CMD "    --dual-scaf --telo-m CCCTAA \\\n";
     print CMD "    -t \$SLURM_CPUS_PER_TASK    \\\n";
-    print CMD "         $hifi \\\n";
-    print CMD "    --ul $nano \\\n";
-    print CMD "    --ul-cut 50000 \\\n";
+    if ($flav =~ /nano$/) {
+       print CMD "   --nano $nanoR10 \\\n";
+    } else {
+       print CMD "          $hifi \\\n";
+       print CMD "   --ul   $nano \\\n";
+       print CMD "   --ul-cut 50000 \\\n";
+    }
     print CMD "    -1 $data/$samp/yakmers/pati.yak \\\n";
     print CMD "    -2 $data/$samp/yakmers/mati.yak \\\n";
     print CMD "    $params      \\\n";
@@ -83,7 +88,7 @@ sub createHifiasmTrio ($$$$$$$) {
     print CMD "  cat $flav/assembly.dip.hap[12].p_ctg.gfa  |awk '{if (match(\$1, \"^S\")) { print \"path \"\$2\" utig4-\"\$2 } }' > $flav/assembly.scfmap && \\\n";
     print CMD "  cat $flav/assembly.dip.hap[12].p_ctg.gfa  |awk '{if (match(\$1, \"^S\")) { print \$1\"\\tutig4-\"\$2\"\\t*\\tLN:i:\"length(\$3); } else if (match(\$1, \"^L\")) print \$1\"\\tutig4-\"\$2\"\\t\"\$3\"\\tutig4-\"\$4\"\\t\"\$5\"\\t\"\$6 }' > $flav/assembly.homopolymer-compressed.noseq.gfa && \\\n";
     print CMD "  cat $flav/assembly.dip.hap[12].p_ctg.gfa  |awk '{if (match(\$1, \"^S\")) { gsub(/A+/, \"A\", \$3); gsub(/C+/, \"C\", \$3); gsub(/G+/, \"G\", \$3); gsub(/T+/, \"T\", \$3);  print \$1\"\\tutig4-\"\$2\"\\t\"\$3\"\\tLN:i:\"length(\$3); } else if (match(\$1, \"^L\")) print \$1\"\\tutig4-\"\$2\"\\t\"\$3\"\\tutig4-\"\$4\"\\t\"\$5\"\\t\"\$6 }' > $flav/assembly.homopolymer-compressed.gfa && \\\n";
-    print CMD "  cat $flav/assembly.hic.hap[12].p_ctg.gfa  |awk '{if (NR == 1) print \"node\\tmat\\tpat\\tmat:pat\\tcolor\"; if (match(\$1, \"^S\")) { if (match(\$2, \"h1tg\")) { C=\"#FF8888\"; M=100000; P=0; } else if (match(\$2, \"h2tg\")) { C=\"#8888FF\"; M=0; P=100000; } else { C=\"#88FF88\"; M=0; P=0; } print \"utig4-\"\$2\"\\t\"M\"\\t\"P\"\\t\"M\":\"P\"\\t\"C}}' > $flav/assembly.colors.csv && \\\n";
+    print CMD "  cat $flav/assembly.dip.hap[12].p_ctg.gfa  |awk '{if (NR == 1) print \"node\\tmat\\tpat\\tmat:pat\\tcolor\"; if (match(\$1, \"^S\")) { if (match(\$2, \"h1tg\")) { C=\"#FF8888\"; M=100000; P=0; } else if (match(\$2, \"h2tg\")) { C=\"#8888FF\"; M=0; P=100000; } else { C=\"#88FF88\"; M=0; P=0; } print \"utig4-\"\$2\"\\t\"M\"\\t\"P\"\\t\"M\":\"P\"\\t\"C}}' > $flav/assembly.colors.csv && \\\n";
     print CMD "  touch $flav/hifiasm.complete\n";
     print CMD "fi\n";
     print CMD "\n";

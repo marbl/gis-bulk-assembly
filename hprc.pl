@@ -208,6 +208,8 @@ while (scalar(@ARGV) > 0) {
 
   elsif ($arg eq "--hifiasm-trio")  { $opts{"flavor"} = "hifiasm-trio";}
   elsif ($arg eq "--hifiasm-hi-c")  { $opts{"flavor"} = "hifiasm-hi-c";}
+  elsif ($arg eq "--hifiasm-trio-nano")  { $opts{"flavor"} = "hifiasm-trio-nano";}
+  elsif ($arg eq "--hifiasm-hi-c-nano")  { $opts{"flavor"} = "hifiasm-hi-c-nano";}
 
   elsif ($arg eq "--verkko-base")   { $opts{"flavor"} = "verkko-base"; }   #  Correction, MBG up through untip.  All depend on this.
   elsif ($arg eq "--verkko-trio")   { $opts{"flavor"} = "verkko-trio"; }   #  Continue 'base' into a trio assembly.

@@ -10,18 +10,19 @@
 ##
 
 
-sub createHifiasmHiC ($$$$$$$$$) {
-  my $samp  = shift @_;
-  my $flav  = "hifiasm-hi-c";
-  my $hifi  = shift @_;
-  my $nano  = shift @_;
-  my $hic1  = shift @_;
-  my $hic2  = shift @_;
-  my $missi = shift @_;
-  my $unava = shift @_;
-  my $compl = shift @_;
-  my $params= shift @_;
-  my $sdir  = "$rasm/$samp";
+sub createHifiasmHiC ($$$$$$$$$$$) {
+  my $samp    = shift @_;
+  my $flav    = shift @_;
+  my $hifi    = shift @_;
+  my $nano    = shift @_;
+  my $nanoR10 = shift @_;
+  my $hic1    = shift @_;
+  my $hic2    = shift @_;
+  my $missi   = shift @_;
+  my $unava   = shift @_;
+  my $compl   = shift @_;
+  my $params  = shift @_;
+  my $sdir    = "$rasm/$samp";
 
   # hifiasm wants UL and HiC data to be comma-separated (but not hifi)
   $nano =~ s/ /,/g;
@@ -64,9 +65,13 @@ sub createHifiasmHiC ($$$$$$$$$) {
     print CMD "  $rsoft/hifiasm/hifiasm -o $flav/assembly \\\n";
     print CMD "    --dual-scaf --telo-m CCCTAA \\\n";
     print CMD "    -t \$SLURM_CPUS_PER_TASK    \\\n";
-    print CMD "         $hifi \\\n";
-    print CMD "    --ul $nano \\\n";
-    print CMD "    --ul-cut 50000 \\\n";
+    if ($flav =~ /nano$/) {
+       print CMD "    --nano $nanoR10 \\\n";
+    } else {
+       print CMD "           $hifi \\\n";
+    print CMD "       --ul   $nano \\\n";
+    print CMD "       --ul-cut 50000 \\\n";
+    }
     print CMD "    --h1 $hic1 \\\n";
     print CMD "    --h2 $hic2 \\\n";
     print CMD "    $params      \\\n";
