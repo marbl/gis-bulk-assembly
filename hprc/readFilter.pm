@@ -69,7 +69,7 @@ sub filterHiFi ($$$$$$$) {
     print CMD "fi\n";
     print CMD "\n";
     print CMD "\n";
-    print CMD "$root/software/seqrequester/build/bin/seqrequester extract -fasta \\\n";
+    print CMD "$rsoft/seqrequester/build/bin/seqrequester extract -fasta \\\n";
     print CMD "  '$locf' \\\n";
     print CMD "| \\\n";
     print CMD "cutadapt --fasta --discard --revcomp -j \$cutCPUs -e 0.05 \\\n";

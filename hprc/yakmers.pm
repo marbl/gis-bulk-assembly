@@ -23,7 +23,7 @@ use hprc::samples;
 use hprc::aws;
 
 #y $yak = from module
-my $seqr = "$root/software/seqrequester/build/bin/seqrequester";
+my $seqr = "$rsoft/seqrequester/build/bin/seqrequester";
 
 sub emitYak ($$$$) {
   my $yako = shift @_;

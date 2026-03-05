@@ -69,10 +69,10 @@ sub startRibotinAnalysis($$) {
     print CMD "fi\n";
     print CMD "\n";
     print CMD "if [ ! -e ribotin.out ] ; then\n";
-    print CMD "export PATH=\$PATH:/$root/software/ribotin/bin\n";
+    print CMD "export PATH=\$PATH:/$rsoft/ribotin/bin\n";
     # we make a copy of the ribotin template sequences because liftoff was crashing when too many DBs were pointed to the same gff
-    print CMD "cp -r $root/software/ribotin/template_seqs ./\n";
-    print CMD "$root/software/ribotin/bin/ribotin-verkko --graphaligner $root/software/graphaligner/bin/GraphAligner --mbg $root/software/verkko/lib/verkko/bin/MBG \\\n";
+    print CMD "cp -r $rsoft/ribotin/template_seqs ./\n";
+    print CMD "$rsoft/ribotin/bin/ribotin-verkko --graphaligner $rsoft/graphaligner/bin/GraphAligner --mbg $rsoft/verkko/lib/verkko/bin/MBG \\\n";
     print CMD "    -t \$SLURM_CPUS_PER_TASK \\\n";
     print CMD "    -x human \\\n";
     print CMD "    --guess-tangles-using-reference ./template_seqs/chm13_rDNAs.fa \\\n";

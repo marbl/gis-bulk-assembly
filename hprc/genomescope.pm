@@ -24,7 +24,7 @@ use hprc::samples;
 use hprc::assemble;
 
 my $genomescope = "/data/Phillippy/tools/genomescope2.0/genomescope.R";
-my $meryl       = "$root/software/meryl/build/bin/meryl";
+my $meryl       = "$rsoft/meryl/build/bin/meryl";
 
 sub computeGenomescope ($$) {
   my $samp  = shift @_;

@@ -30,7 +30,7 @@ sub createCanuHiFi ($$$$$$) {
     print CMD "\n";
     print CMD "export REF_CACHE=$ENV{'REF_CACHE'}\n";
     print CMD "\n";
-    print CMD "$root/software/canu/build/bin/canu -p asm -d verkko \\\n";
+    print CMD "$rsoft/canu/build/bin/canu -p asm -d verkko \\\n";
     print CMD "  genomeSize=3.1g useGrid=true gridOptionsJobName=ch$samp \\\n";
     print CMD "  gridOptionsOvl=\"-t 4-0\" \\\n";
     print CMD "  -pacbio-hifi $hifi \n";

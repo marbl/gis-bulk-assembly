@@ -22,7 +22,7 @@ no  warnings "uninitialized";
 use hprc::samples;
 use hprc::aws;
 
-my $meryl = "$root/software/meryl/build/bin/meryl";
+my $meryl = "$rsoft/meryl/build/bin/meryl";
 
 sub computeHapmers ($$) {
   my $samp = shift @_;
@@ -120,7 +120,7 @@ sub computeHapmers ($$) {
     print CMD "\n";
     print CMD "\n";
 
-    my $filt1 = "\$(java -jar -Xmx1g $root/software/merqury/eval/kmerHistToPloidyDepth.jar";
+    my $filt1 = "\$(java -jar -Xmx1g $rsoft/merqury/eval/kmerHistToPloidyDepth.jar";
     my $filt2 = "2> /dev/null | awk '\$1 == 0 { print \$3 }')";
 
     print CMD "#\n";

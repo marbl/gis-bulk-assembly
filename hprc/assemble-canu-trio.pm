@@ -34,7 +34,7 @@ sub createCanuTrio ($$$$$$$$) {
     print CMD "\n";
     print CMD "module load samtools\n";
     print CMD "\n";
-    print CMD "$root/software/canu/build/bin/canu -p asm -d verkko \\\n";
+    print CMD "$rsoft/software/canu/build/bin/canu -p asm -d verkko \\\n";
     print CMD "  genomeSize=3.1g useGrid=true gridOptionsJobName=ct$samp \\\n";
     print CMD "  gridOptionsOvl=\"-t 6-0\" \\\n";
     print CMD "  -haplotypeMAT $mati \\\n";

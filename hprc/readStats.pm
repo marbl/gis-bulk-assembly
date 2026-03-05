@@ -61,8 +61,8 @@ sub summarizeReads ($$$) {
         my $outl = $file;    $outl =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.readlen/;
         my $name = $file;    $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//;  $name =~ s!/!--!;  $name =~ s!^.*--!!;
 
-        my $cmds = "$root/software/seqrequester/build/bin/seqrequester summarize         '$file' > '$outs.tmp' 2> '$outs.err' && mv '$outs.tmp' '$outs'";
-        my $cmdl = "$root/software/seqrequester/build/bin/seqrequester summarize -seqlen '$file' > '$outl.tmp' 2> '$outl.err' && mv '$outl.tmp' '$outl'";
+        my $cmds = "$rsoft/seqrequester/build/bin/seqrequester summarize         '$file' > '$outs.tmp' 2> '$outs.err' && mv '$outs.tmp' '$outs'";
+        my $cmdl = "$rsoft/seqrequester/build/bin/seqrequester summarize -seqlen '$file' > '$outl.tmp' 2> '$outl.err' && mv '$outl.tmp' '$outl'";
 
         print STDERR "   s $cmds\n";
         print STDERR "   l $cmdl\n";
