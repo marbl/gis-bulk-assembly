@@ -41,7 +41,7 @@ sub createVerkkoTrio ($$$$$$$) {
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=2\n";
     print CMD "#SBATCH --mem=16g\n";
-    print CMD "#SBATCH --time=4-0\n";
+    print CMD "#SBATCH --time=8-0\n";
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
     print CMD "#SBATCH --job-name=trio$samp\n";
     print CMD "#\n";
