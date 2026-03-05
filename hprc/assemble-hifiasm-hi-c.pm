@@ -38,10 +38,17 @@ sub createHifiasmHiC ($$$$$$$$$$$$) {
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
-    print CMD "#SBATCH --cpus-per-task=48\n";
-    print CMD "#SBATCH --partition=largemem\n";
-    print CMD "#SBATCH --mem=1000g\n";
-    print CMD "#SBATCH --time=6-0\n";
+    if ($hasHybrid) { # requires more memory/time
+       print CMD "#SBATCH --cpus-per-task=72\n";
+       print CMD "#SBATCH --partition=largemem\n";
+       print CMD "#SBATCH --mem=1000g\n";
+       print CMD "#SBATCH --time=240:00:00\n";
+    } else {
+       print CMD "#SBATCH --cpus-per-task=48\n";
+       print CMD "#SBATCH --partition=norm\n";
+       print CMD "#SBATCH --mem=300g\n";
+       print CMD "#SBATCH --time=120:00:00\n";
+    }
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
     print CMD "#SBATCH --job-name=hifihi-c$samp\n";
     print CMD "#\n";
