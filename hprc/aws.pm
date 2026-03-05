@@ -13,7 +13,7 @@ package hprc::aws;
 require Exporter;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(awsToLocalPath awsToLocalInfo awsToLocalName fetchInfo getRemoteSize getLocalSize fetchData getFileMap getDownloadedFiles);
+@EXPORT = qw(awsToLocalPath awsToLocalInfo awsToLocalName fetchInfo getRemoteSize getLocalSize fetchData getFileMap getDownloadedFiles getCoverage);
 
 use strict;
 use warnings "all";
@@ -42,7 +42,7 @@ sub awsToLocalPath ($$@) {
   if ($locf =~ /^s3:/) {
     $locf =~ s!^s3:----human-pangenomics--\w+--!!;
     # for s3 paths not from human-pangenomics bucket
-    $locf =~ s!^s3:----!/!;
+    $locf =~ s!^s3:----!!;
   }
   elsif ($locf =~ /^ftp:/) {
     # for ftp links from sra.ebi.ac.uk
@@ -300,7 +300,7 @@ sub getFileMap ($$@) {
     $type = "hic";
   }
   if      ($type eq "ont-r10") {  # select only those read which are R10
-     $ontr10 = qr/_R1041_/;
+     $ontr10 = qr/_R1041_|_r10.4.1_/;
      $type = "ont"
   }
 
@@ -347,14 +347,12 @@ sub getFileMap ($$@) {
     }
 
     #  Now insert in the map based on if the file exists or not.
-
     if (-e $locf) { $localmap{$awsf} = $locf; }
     elsif ($nonE) { $localmap{$awsf} = $locf; }
     else          { $localmap{$awsf} = "";    }
   }
 
   #  And return the whole map.
-
   return %localmap;
 }
 
@@ -372,6 +370,34 @@ sub getDownloadedFiles ($$) {
   }
 
   return join " ", sort values %m;
+}
+
+sub getCoverage($$) {
+  my $samp   = shift @_;
+  my $types  = shift @_;
+
+  #  Read total bases
+  my $nBases = 0;
+
+  foreach my $t (sort keys %$types) {
+    my %files = getFileMap($samp, $t, "even-those-that-don't-exist");
+    foreach my $file (values %files) {
+      my $outs = $file;    $outs =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$/.summary/;
+
+      if (-e "$outs") {
+        open(SUM, "< $outs") or die "Failed to open '$outs': $!\n";
+        while (<SUM>) {
+          if (m/^00100\s+(\d+)\s+(\d+)\s+(\d+)\s+/) {
+            $nBases += $3;
+          }
+        }
+        close(SUM);
+      } else {
+        die "Failed to get coverage, missing summary for '$outs'. Please run read-stats first!\n";
+      }
+    }
+  }
+  return int($nBases / 3100000000);
 }
 
 1;

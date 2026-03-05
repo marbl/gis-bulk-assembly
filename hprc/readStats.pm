@@ -50,8 +50,6 @@ sub summarizeReads ($$$) {
     }
 
     if ($needCompute) {
-      print STDERR "Computing summaries for type $type with ", scalar(values %files), " files.\n";
-
       foreach my $aws (keys %files) {
         print STDERR "$aws -> $files{$aws}\n";
       }
@@ -69,7 +67,7 @@ sub summarizeReads ($$$) {
         print STDERR " - $name";
         print STDERR " -- summary:";
         if (! -e $outs) {
-          if    (! -e $file)          { print STDERR  "MISSING";                       }
+          if    (! -e $file)          { print STDERR  "MISSING file $file doesn't exist!";                       }
           elsif (system($cmds) != 0)  { print STDERR  "FAILED ";  unlink "$outs.tmp";  }
           else                        { print STDERR  "done   ";  unlink "$outs.err";  }
         } else                        { print STDERR  "exists ";                       }
@@ -80,7 +78,7 @@ sub summarizeReads ($$$) {
             ($type eq "mat-ilmn") ||
             ($type eq "pat-ilmn"))     { print STDERR  "skipped";                      }
         elsif (! -e $outl) {
-          if    (! -e $file)          { print STDERR  "MISSING";                       }
+          if    (! -e $file)          { print STDERR  "MISSING file $file doesn't exist";                       }
           elsif (system($cmdl) != 0)  { print STDERR  "FAILED";   unlink "$outl.tmp";  }
           else                        { print STDERR  "done";     unlink "$outl.err";  }
         } else                        { print STDERR  "exists";                        }
