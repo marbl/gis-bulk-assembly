@@ -114,6 +114,7 @@ sub computeAssembly ($$) {
 
   my $hifi = getDownloadedFiles($samp, "hifi-cutadapt");   #  Return cutadapt form of hifi data.
   $hifi .= " " . getCorrectedFiles($samp);
+  my $hifiraw = getDownloadedFiles($samp, "hifi");          # Return raw version of hifi data (needed for hybrid hifiasm)
   my $nano = getDownloadedFiles($samp, "ont");
   my $nanoR10 = getDownloadedFiles($samp, "ont-r10");
 
@@ -126,7 +127,10 @@ sub computeAssembly ($$) {
   my $params = getParameters($samp);
 
   my $hifiMissing   =  (($hifi eq "") && (numFiles($samp, "hifi-cutadapt") > 0) ||
-                       scalar(split ' ', $hifi) < numFiles($samp, "hifi-cutadapt"));
+                       scalar(split ' ', $hifi) < numFiles($samp, "hifi-cutadapt")) ||
+                        (getCorrectedFiles($samp) ne "" && ! -e getCorrectedFiles($samp));
+  my $hifiRawMissing =  (($hifiraw eq "") && (numFiles($samp, "hifi") > 0) ||
+                         scalar(split ' ', $hifiraw) < numFiles($samp, "hifi"));
   my $nanoMissing   =  (($nano eq "") && (numFiles($samp, "ont")           > 0) ||
                        scalar(split ' ', $nano) < numFiles($samp, "ont"));
   my $nanoR10Missing = (($nanoR10 eq "") && (numFiles($samp, "ont-r10")     > 0) ||
@@ -212,12 +216,14 @@ sub computeAssembly ($$) {
     my @m;
     push @m, "ont"               if ($nanoR10Missing);
     push @m, "hic"               if ($hicMissing);
+    push @m, "hifi-raw"          if ($hifiRawMissing);
     $missingC = combine(@m);
   }
   if ($flav eq "hifiasm-trio-nano") {
     my @m;
     push @m, "ont"               if ($nanoR10Missing);
     push @m, "yakmer databases"  if ($yakmerMissing);
+    push @m, "hifi-raw"          if ($hifiRawMissing);
     $missingC = combine(@m);
   }
   if (($flav eq "verkko-base") || ($flav eq "verkko-full")) {
@@ -308,8 +314,8 @@ sub computeAssembly ($$) {
     if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl, ""); }
     if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl, ""); }
 
-    if ($flav =~ /^hifiasm-trio/) { $scr = createHifiasmTrio ($samp, $flav, $hifi, $nano, $nanoR10,               $missing, $unavail = $unavailT, $compl, ""); }
-    if ($flav =~ /^hifiasm-hi-c/) { $scr = createHifiasmHiC  ($samp, $flav, $hifi, $nano, $nanoR10, $hic1, $hic2, $missing, $unavail = $unavailH, $compl, ""); }
+    if ($flav =~ /^hifiasm-trio/) { $scr = createHifiasmTrio ($samp, $flav, $hifi, $hifiraw, $nano, $nanoR10,               $missing, $unavail = $unavailT, $compl, ""); }
+    if ($flav =~ /^hifiasm-hi-c/) { $scr = createHifiasmHiC  ($samp, $flav, $hifi, $hifiraw, $nano, $nanoR10, $hic1, $hic2, $missing, $unavail = $unavailH, $compl, ""); }
 
     if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl, $params); }
     if ($flav eq "verkko-trio") { $scr = createVerkkoTrio   ($samp, $hifi, $nano,               $missing, $unavail = $unavailT, $compl, $params); }   #  Trio DBs implicitly exist.

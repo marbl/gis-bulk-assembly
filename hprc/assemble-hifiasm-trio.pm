@@ -19,10 +19,11 @@ sub locateYakmers ($) {     #  In array context, returns the expected locations 
   return wantarray() ? ($mati, $pati) : $missi;
 }
 
-sub createHifiasmTrio ($$$$$$$$$) {
+sub createHifiasmTrio ($$$$$$$$$$) {
   my $samp    = shift @_;
   my $flav    = shift @_;
   my $hifi    = shift @_;
+  my $hifiraw = shift @_;
   my $nano    = shift @_;
   my $nanoR10 = shift @_;
   my $missi   = shift @_;
@@ -31,8 +32,8 @@ sub createHifiasmTrio ($$$$$$$$$) {
   my $params  = shift @_;
   my $sdir    = "$rasm/$samp";
 
-  # hifiasm wants UL and HiC data to be comma-separated (but not hifi)
-  $nano =~ s/ /,/g;
+  # figure out if we have older hifiasm or version supporting hybrid correction
+  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1 1>/dev/null` =~ /--hf/);
 
   if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $sdir")  if (! -d $sdir);
@@ -42,7 +43,7 @@ sub createHifiasmTrio ($$$$$$$$$) {
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=48\n";
     print CMD "#SBATCH --partition=largemem\n";
-    print CMD "#SBATCH --mem=500g\n";
+    print CMD "#SBATCH --mem=1000g\n";
     print CMD "#SBATCH --time=6-0\n";
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
     print CMD "#SBATCH --job-name=hifitrio$samp\n";
@@ -58,7 +59,6 @@ sub createHifiasmTrio ($$$$$$$$$) {
     print CMD "export REF_CACHE=$ENV{'REF_CACHE'}\n";
     print CMD "\n";
     print CMD "module load python   # ensure we load newer python as we need 3.8+ for hic\n";
-    print CMD "module load hifiasm\n";
     print CMD "module load winnowmap\n";
     print CMD "module load mashmap\n";
     print CMD "module load samtools\n";
@@ -67,14 +67,54 @@ sub createHifiasmTrio ($$$$$$$$$) {
     print CMD "\n";
     print CMD "#\n";
     print CMD "if [ ! -e \"$flav/hifiasm.complete\" ]; then\n";
+
+    my $inputNano = ($flav =~ /nano$/) ? $nanoR10 : $nano;
+    if ($flav =~ /nano$/) {
+       if ($hasHybrid) {
+          print CMD "   (\n";
+          print CMD "   for f in $hifiraw; do\n";
+          print CMD "     if [[ \$f == *.bam ]]; then\n";
+          print CMD "        samtools fastq \"\$f\"\n";
+          print CMD "     elif [[ \$f == *.fastq.gz || \$f == *.fq.gz ]]; then\n";
+          print CMD "        zcat \"\$f\"\n";
+          print CMD "     elif [[ \$f == *.fastq.bz2 || \$f == *.fq.bz2 ]]; then\n";
+          print CMD "        bzcat \"\$f\"\n";
+          print CMD "     elif [[ \$f == *.fastq || \$f == *.fq ]]; then\n";
+          print CMD "        cat \"\$f\"\n";
+          print CMD "     else\n";
+          print CMD "        echo \"Warning: unrecognized format for hifiInput \$f\" >&2\n";
+          print CMD "     fi\n";
+          print CMD "   done\n";
+          print CMD "   ) | bgzip -@ \$SLURM_CPUS_PER_TASK -l 9 -i -c -I $flav/hifi.input.fastq.gz.gzi - > $flav/hifi.input.fastq.gz \n";
+          my %readTypes =  { "hifi" => 1, "ont-r10" => 1 };
+          my $coverage = getCoverage($samp, \%readTypes);
+          $extraArgs="--hf $odir/hifi.input.fastq.gz \\\n        --hom-cov $coverage --chn-occ 3"
+       }
+    }
+    print CMD "   (\n";
+    print CMD "   for f in $inputNano; do\n";
+    print CMD "     if [[ \$f == *.bam ]]; then\n";
+    print CMD "        samtools fastq \"\$f\"\n";
+    print CMD "     elif [[ \$f == *.fastq.gz || \$f == *.fq.gz ]]; then\n";
+    print CMD "        zcat \"\$f\"\n";
+    print CMD "     elif [[ \$f == *.fastq.bz2 || \$f == *.fq.bz2 ]]; then\n";
+    print CMD "        bzcat \"\$f\"\n";
+    print CMD "     elif [[ \$f == *.fastq || \$f == *.fq ]]; then\n";
+    print CMD "        cat \"\$f\"\n";
+    print CMD "     else\n";
+    print CMD "        echo \"Warning: unrecognized format for hifiInput '\$f'\" >&2\n";
+    print CMD "     fi\n";
+    print CMD "   done\n";
+    print CMD "   ) | bgzip -@ \$SLURM_CPUS_PER_TASK -l 9 -i -c -I $flav/nano.input.fastq.gz.gzi - > $flav/nano.input.fastq.gz \n";
+
     print CMD "  $rsoft/hifiasm/hifiasm -o $flav/assembly \\\n";
     print CMD "    --dual-scaf --telo-m CCCTAA \\\n";
     print CMD "    -t \$SLURM_CPUS_PER_TASK    \\\n";
     if ($flav =~ /nano$/) {
-       print CMD "   --nano $nanoR10 \\\n";
+       print CMD "   --ont $flav/nano.input.fastq.gz $extraArgs \\\n";
     } else {
        print CMD "          $hifi \\\n";
-       print CMD "   --ul   $nano \\\n";
+       print CMD "   --ul   $flav/nano.input.fastq.gz \\\n";
        print CMD "   --ul-cut 50000 \\\n";
     }
     print CMD "    -1 $data/$samp/yakmers/pati.yak \\\n";

@@ -104,7 +104,9 @@ sub isFinished ($$) {
          ($flav eq "verkko-thic")) {
     $fini = 1   if (-e "$dirn/$flav/assembly.fasta") || (-e "$dirn/$flav/assembly.fasta.gz");
   } elsif (($flav eq "hifiasm-hi-c") ||
-           ($flav eq "hifiasm-trio")) {
+           ($flav eq "hifiasm-trio") ||
+           ($flav eq "hifiasm-hi-c-nano") ||
+           ($flav eq "hifiasm-trio-nano")) {
     $fini = 1   if (-e "$dirn/$flav/assembly.fasta") || (-e "$dirn/$flav/assembly.fasta.gz");
   }
   return $fini;

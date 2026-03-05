@@ -72,8 +72,8 @@ sub cleanupAssembly ($$) {
         (($flav eq "verkko-trio") && (!$fintrio)) ||
         (($flav eq "verkko-hi-c") && (!$finhic)) ||
         (($flav eq "verkko-thic") && (!$finthic)) ||
-		(($flav eq "hifiasm-hi-c") && (!$finhifiasmhic)) ||
-		(($flav eq "hifiasm-trio") && (!$finhifiasmtrio))) {
+        (($flav eq "hifiasm-hi-c") && (!$finhifiasmhic)) ||
+        (($flav eq "hifiasm-trio") && (!$finhifiasmtrio))) {
       print " - INCOMPLETE.\n";
       next;
     }
@@ -84,6 +84,7 @@ sub cleanupAssembly ($$) {
     if ($flav eq "verkko-trio")   { $unused = ($finbase && $fintrio &&            $finthic); }
     if ($flav eq "verkko-hi-c")   { $unused = ($finbase &&             $finhic            ); }
     if ($flav eq "verkko-thic")   { $unused = ($finbase && $fintrio &&            $finthic); }
+    if ($flav =~ /^hifiasm-/)     { $unused = 1; }  # hifiasm are all standalone
 
     if (!$unused) {
       print " - COMPLETE but in-use.\n";
@@ -110,6 +111,7 @@ sub cleanupAssembly ($$) {
     foreach my $d (qw(7-consensus 8-hicPipeline/final_contigs/7-consensus)) {
       if (-e "$dirn/$d/packages/part001.cnspack") { system("rm -rf $dirn/$d/packages/part*.cnspack"); }
       if (-e "$dirn/$d/packages/part001.fasta")   { system("rm -rf $dirn/$d/packages/part*.fasta");   }
+      if (glob("$dirn/$d/packages/part001*bam"))  { system("rm -rf $dirn/$d/packages/part*.bam");   }
       if (-e "$dirn/$d/packages")                 { system("cd $dirn/$d && tar -cf packages-logs.tar packages && rm -rf packages"); }
     }
 
@@ -156,12 +158,16 @@ sub cleanupAssembly ($$) {
                       assembly.disconnected.fasta
                       assembly.unassigned.fasta
                       assembly.fasta
+                      assembly.bam
+                      assembly.cram
                       assembly.haplotype1.fasta
                       assembly.haplotype2.fasta
                       assembly.ebv.exemplar.fasta  assembly.ebv.fasta
                       assembly.mito.exemplar.fasta assembly.mito.fasta
                       assembly.rdna.exemplar.fasta assembly.rdna.fasta
                       combined.fasta
+                      unitig-popped.bam
+                      unitig-popped.cram
                       unitig-popped.fasta
                       unitig-popped.haplotype1.fasta
                       unitig-popped.haplotype2.fasta
