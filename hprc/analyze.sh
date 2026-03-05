@@ -50,7 +50,7 @@ echo "Root: '$root'"
 echo "Ref: '$refn' and '$refc'"
 echo "odb: '$odb'"
 base=`pwd`
-base=`dirname $base |awk -F "/" '{print $NF}' |sed s/verkko-hi-c-test/verkko-base/g | sed s/verkko-hi-c/verkko-base/g |sed s/verkko-trio/verkko-base/g |sed s/verkko-thic/verkko-base/g`
+base=`dirname $base |awk -F "/" '{print $NF}' |sed s/verkko-hi-c-polished/verkko-base/g | sed s/verkko-hi-c/verkko-base/g |sed s/verkko-trio/verkko-base/g |sed s/verkko-thic/verkko-base/g`
 
 compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`
@@ -300,7 +300,7 @@ done
 
 for asm in assembly assembly.haplotype1 assembly.haplotype2 ; do
     if [ ! -e $asm.yak.qv -a -e $data/$samp/yakmers/ilmn.yak ] ; then
-        yak qv       -t $cpus -l 100000 $data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
+        yak qv       -t $cpus -l 100000 -p $data/$samp/yakmers/ilmn.yak ../$asm.fasta > $asm.yak.qv
     else
         touch $asm.yak.qv.NO_ILMN_DATA
     fi
