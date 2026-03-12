@@ -38,7 +38,6 @@ sub awsToLocalPath ($$@) {
   my $strip = shift @_;
 
   $locf =~ s!/!--!g;
-
   if ($locf =~ /^s3:/) {
     $locf =~ s!^s3:----human-pangenomics--\w+--!!;
     # for s3 paths not from human-pangenomics bucket
@@ -53,7 +52,6 @@ sub awsToLocalPath ($$@) {
   elsif ($locf =~ /^local:/) {
     $locf =~ s!^.*--!!;
   }
-
   $locf = (length($locf)) > 255-10 ? substr($locf, length($locf)-255+10, 255) : $locf;
   $locf = "$data/$samp/$locf";
   $locf =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
@@ -100,7 +98,6 @@ sub awsToLocalName ($$@) {
   $name =~ s!^.*--!!;   #  Delete everything up to the LAST --.
   die "Error: filename path $name is too long" if length($name) > 255;
   $name =~ s/.(fasta.gz|fastq.gz|sam|bam|cram|fq.gz|fa.gz)$//  if ($strip);
-
   return($name);
 }
 
@@ -335,7 +332,7 @@ sub getFileMap ($$@) {
       my $nf = $locf;
 
       $nf   =~ s/.(f(ast){0,1}[aq].gz|sam|bam|cram)$//i;  #  Replace existing extension
-      $nf   =~ s!/$samp/!/$samp/$subd/!;                  #  Insert new subdirectory
+      $nf =~ s!(.*)/\Q$samp\E/!$1/$samp/$subd/!;          #  Insert new subdirectory, make sure we only use the last instance of samp
       $locf = undef;
 
       foreach my $ext (qw(fasta.gz fa.gz fastq.gz fq.gz cram bam sam)) {
