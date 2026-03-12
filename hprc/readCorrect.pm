@@ -75,7 +75,7 @@ sub correctONTR10 ($$$$) {
     } else {
        print CMD "#SBATCH --cpus-per-task=48\n";
        print CMD "#SBATCH --partition=norm\n";
-       print CMD "#SBATCH --mem=300g\n";
+       print CMD "#SBATCH --mem=320g\n";
        print CMD "#SBATCH --time=120:00:00\n";
     }
     print CMD "#SBATCH --output=$odir/$onam.err\n";
