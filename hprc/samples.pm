@@ -109,6 +109,7 @@ sub loadSamples ($) {
 
       $h =~ s/nanopore/ont/;
 
+      $h =~ s/ill/ilmn/;
       $h =~ s/child_ilmn/ilmn/;
       $h =~ s/mat_ilmn/mat-ilmn/;
       $h =~ s/pat_ilmn/pat-ilmn/;
