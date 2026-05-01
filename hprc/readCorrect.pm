@@ -24,58 +24,79 @@ use File::Basename;
 use hprc::samples;
 use hprc::aws;
 
+sub getOutputs($) {
+  my $odir       =  shift @_;
+  my $onam       =  "";
+  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/);
+
+  if ($hasHybrid) {
+     $odir .= "/ont-hifiasm-hybrid-correct";#  Path in local filesystem (or empty if doesn't exist).
+	 $onam  = "r10-hifiasm-correct.ec.ont.fq.gz";
+  } else {
+     $odir .= "/ont-hifiasm-correct";
+	 $onam  = "r10-hifiasm-correct.ec.fq.gz";
+  }
+  return ($odir, $hasHybrid, $onam);
+}
+
 sub getCorrectedFiles($) {
   my $samp   = shift @_;
   my $type   = 'ont-r10';
   my %files = getFileMap($samp, $type, 1);
   my $input = scalar(keys %files);
-  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/);
-  my $exprun   = $hasHybrid ? "$data/$samp/ont-hifiasm-hybrid-correct/r10-hifiasm-correct.input.fastq.gz" : "$data/$samp/ont-hifiasm-correct/r10-hifiasm-correct.input.fastq.gz";
-  my $expected = $hasHybrid ? "$data/$samp/ont-hifiasm-hybrid-correct/r10-hifiasm-correct.ec.ont.fq.gz"   : "$data/$samp/ont-hifiasm-correct/r10-hifiasm-correct.ec.fq.gz";
+  my ($odir, $hasHybrid, $onam) = getOutputs("$data/$samp");
+  my $exprun   = "$odir/r10-hifiasm-correct.input.fastq.gz";
+  my $expected = "$odir/$onam";
 
-  return ((-e $expected || -e $exprun) && $input > 0) ? "$expected" : "";
+  return ((-e $expected || -e $exprun) && $input >= 1) ? "$expected" : "";
 }
 
 sub correctONTR10 ($$$$) {
   my $samp       =  shift @_;                       #  Sample name, for logging.
   my $inputs_ref =  shift @_;                       #  Read inputs
-  my $odir       =  shift @_;
+  my $orig       =  shift @_;
   my $onam       =  "r10-hifiasm-correct";
   my $submit     =  shift @_;                       #
   my @inputs = @$inputs_ref;
 
   # figure out if we have older hifiasm or version supporting hybrid correction
-  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/);
+  my ($odir, $hasHybrid, $ig) = getOutputs($orig);
   my $hifiMissing;
   my $hifi;
   my $extraArgs;
+  my $coverage = 1;
   if ($hasHybrid) {
-     $odir .= "/ont-hifiasm-hybrid-correct";#  Path in local filesystem (or empty if doesn't exist).
      $hifi = getDownloadedFiles($samp, "hifi");   #  Return raw form of hifi data.
      $hifiMissing = (($hifi eq "") && (numFiles($samp, "hifi") > 0) ||
                        scalar(split ' ', $hifi) < numFiles($samp, "hifi"));
     if ($hifiMissing) {
-       print STDERR "Warning: have hybrid hifiasm from $rsoft/hifiasm/hifiasm but hifi data is not available for $samp, not doing hybrid correction" if $hifiMissing;
+       print "ERROR: $samp: have hybrid hifiasm from $rsoft/hifiasm/hifiasm but HiFi data is not available, not doing hybrid correction!\n" if $hifiMissing;
     }
-  } else {
-     $odir .= "/ont-hifiasm-correct";
+    my %readTypes = $hifiMissing ? ( "ont-r10" => 1 ) : ( "hifi" => 1, "ont-r10" => 1 );
+    $coverage = $hifiMissing ? 0 : getCoverage($samp, \%readTypes);                            # force failure when we're missing HiFi, can edit this and just get coverage and it will work as non-hybrid version
   }
 
-  if (! -e "$odir/$onam.sh") {
+  if ($coverage > 0 && ! -e "$odir/$onam.sh") {
     system("mkdir -p $odir");
 
     open(CMD, "> $odir/$onam.sh") or die "Failed to open '$odir/$onam.sh' for writing: $!";
     print CMD "#!/bin/bash\n";
     print CMD "#\n";
     if ($hasHybrid) { # requires more memory/time
-       print CMD "#SBATCH --cpus-per-task=72\n";
-       print CMD "#SBATCH --partition=largemem\n";
-       print CMD "#SBATCH --mem=1000g\n";
-       print CMD "#SBATCH --time=240:00:00\n";
+       print CMD "#SBATCH --cpus-per-task=96\n";
+       # we randomly use the normal or the largemem queue
+       # we can't submit to both but this way let us run more jobs
+       if (int(rand(2)) == 0) {
+          print CMD "#SBATCH --partition=norm\n";
+       } else {
+          print CMD "#SBATCH --partition=largemem\n";
+       }
+       print CMD "#SBATCH --mem=720g\n";
+       print CMD "#SBATCH --time=72:00:00\n";
     } else {
-       print CMD "#SBATCH --cpus-per-task=48\n";
+       print CMD "#SBATCH --cpus-per-task=72\n";
        print CMD "#SBATCH --partition=norm\n";
-       print CMD "#SBATCH --mem=320g\n";
+       print CMD "#SBATCH --mem=350g\n";
        print CMD "#SBATCH --time=120:00:00\n";
     }
     print CMD "#SBATCH --output=$odir/$onam.err\n";
@@ -121,9 +142,7 @@ sub correctONTR10 ($$$$) {
        print CMD "     fi\n";
        print CMD "   done\n";
        print CMD "   ) | bgzip -@ \$zipCPUs \$zipOpt -c -I $odir/hifi.input.fastq.gz.gzi - > $odir/hifi.input.fastq.gz \n";
-       my %readTypes = ( "hifi" => 1, "ont-r10" => 1 );
-       my $coverage = getCoverage($samp, \%readTypes);
-       $extraArgs="--hf $odir/hifi.input.fastq.gz \\\n        --hom-cov $coverage --chn-occ 5"
+       $extraArgs="--hf $odir/hifi.input.fastq.gz \\\n        --hom-cov $coverage"; # --chn-occ 5"
     }
 
     print CMD "   (\n";
@@ -182,6 +201,7 @@ sub correctONTR10 ($$$$) {
   elsif (-e "$odir/$onam.err")             { print "$samp - CRASHED\n"; }
   elsif (-e "$odir/$onam.ec.fq.gz")        { print "$samp - FINISHED\n"; }
   elsif (@missing)                         { foreach my $missing (@missing) { print "$samp - NOT-FETCHED      - $missing\n"; } }
+  elsif ($coverage <= 0)                   { print "$samp - MISSING-SUMMARY-FOR-COVERAGE\n"; }
   elsif (! $submit)                        { print "$samp - READY-TO-COMPUTE\n"; }
   else                                     { print "$samp - SUBMITTED\n"; system("sbatch $odir/$onam.sh > $odir/$onam.jid"); }
 }
@@ -193,11 +213,13 @@ sub correctReads ($$) {
   my $opts   = shift @_;
   my $submit = exists $$opts{"submit"};
 
-  my %files = getFileMap($samp, $type, 1);
-  my $input = scalar(keys %files);
-  my $idir = "$data/$samp/";
+  my %files  = getFileMap($samp, $type, 1);
+  my $input  = scalar(keys %files);
+  my $idir   = "$data/$samp";
+  my ($odir, $hasHybrid, $onam) = getOutputs($idir);
   my @missing = grep { ! -e $_ } (values %files);
-  if ($input == 0)  {   print "$samp - NO APPROPRIATE READ TYPE FOUND - CHECK FOR '$type' DATA\n";}
+  if (-e "$odir/$onam")        { print "$samp - FINISHED\n"; }
+  elsif ($input == 0)  {   print "$samp - NO APPROPRIATE READ TYPE FOUND - CHECK FOR '$type' DATA\n";}
   elsif (@missing)  {   foreach my $missing (@missing) { print "$samp - NOT-FETCHED      - $missing\n"; } }
   else              {   correctONTR10($samp, [values %files], $idir, $submit); }
 }
