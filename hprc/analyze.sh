@@ -43,7 +43,7 @@ else
    odb="primates_odb10"
    data="$root/hprc-data"
 fi
-marbl_utils="/data/korens/devel/marbl_utils"
+marbl_utils="$rsoft/marbl_utils"
 
 samp=$1
 echo "Root: '$root'"
@@ -52,7 +52,7 @@ echo "odb: '$odb'"
 base=`pwd`
 base=`dirname $base |awk -F "/" '{print $NF}' |sed s/verkko-hi-c-polished/verkko-base/g | sed s/verkko-hi-c/verkko-base/g |sed s/verkko-trio/verkko-base/g |sed s/verkko-thic/verkko-base/g`
 
-compleasm="/data/korens/devel/compleasm_kit/compleasm.py"
+compleasm="$rsoft/compleasm_kit/compleasm.py"
 compledir=`dirname $compleasm`
 
 
@@ -255,33 +255,6 @@ if [ ! -e assembly.refOriented.fasta ]; then
 fi
 
 #
-
-#  Old hacked version of compleasm.
-#
-#for asm in assembly.haplotype1 assembly.haplotype2 ; do
-#    for odb in `cd $root/hprc-cache/busco ; ls -d *odb10` ; do
-#        faa="$root/hprc-cache/busco/$odb/refseq_db.faa.gz"
-#
-#        if [ ! -e "$faa" ] ; then
-#            echo "Failed to find '$faa'."
-#            exit 1
-#        fi
-#
-#        if [ ! -e $asm.$odb.full_table.tsv ]; then
-#            if [ ! -s $asm.$odb.aln.gff ]; then
-#                $root/software/miniprot/miniprot -u --outs=0.95 -t$cpus --gff ../$asm.fasta $faa > $asm.$odb.aln.gff
-#            fi
-#
-#            #  This came from minibusco dbf13d032cd6790c7d992f993abc3b604acc5cea
-#            #  with a small bugfix.
-#            python3 $root/hprc/analyze-miniprot.py \
-#                    -g $asm.$odb.aln.gff \
-#                    --full_table_file $asm.$odb.full_table.tsv \
-#                    --complete_file $asm.$odb.summary.txt
-#        fi
-#    done
-#done
-
 
 for asm in assembly.haplotype1 assembly.haplotype2 assembly.unassigned ; do
     for db in $odb ; do
