@@ -215,7 +215,7 @@ rm -f tmp tmp? tmp.gfa
 # this is chromosome assignment
 isXY=`grep chrY translation_hap* |wc -l |awk '{print $1}'`
 if [ $isXY -ne 0 ]; then
-   yak sexchr -t 8 $root/software/yak/chrY-no-par.yak $root/software/yak/chrX-no-par.yak $root/software/yak/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
+   yak sexchr -t 8 $rsoft/yak/chrY-no-par.yak $rsoft/yak/chrX-no-par.yak $rsoft/yak/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
 fi
 
 if [ ! -e assembly.refOriented.fasta ]; then

@@ -23,13 +23,14 @@ use hprc::samples;
 use hprc::aws;
 
 #y $yak = from module
-my $seqr = "$rsoft/seqrequester/build/bin/seqrequester";
 
 sub emitYak ($$$$) {
   my $yako = shift @_;
   my $samp = shift @_;
   my $type = shift @_;
   my $inps = shift @_;
+
+  my $seqr = "$rsoft/seqrequester/build/bin/seqrequester";
 
   my $p1 = "$yako/yak-$samp-$type-1.fifo";
   my $p2 = "$yako/yak-$samp-$type-2.fifo";
@@ -55,6 +56,7 @@ sub emitYak ($$$$) {
   print CMD "  $seqr extract -fasta $inps > $p2 &\n";
   print CMD "\n";
   print CMD "  yak count -k31 -b37 -t \$yakCPUs -o $yako/$type.yak $p1 $p2 \\\n";
+  print CMD "  && yak inspect $yako/$type.yak |grep HS | cut -f 2,4 | sort -snk1,1 > $yako/$type.hist \\\n";
   print CMD "  || \\\n";
   print CMD "  rm -f $yako/$type.yak\n";
   print CMD "\n";
