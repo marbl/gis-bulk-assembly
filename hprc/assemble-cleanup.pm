@@ -181,6 +181,7 @@ sub cleanupAssembly ($$) {
     if (-e "$dirn/8-hicPipeline/mapped001.bam")   { system("rm -f $dirn/8-hicPipeline/mapped???.bam"); }
     if (-e "$dirn/8-hicPipeline/mapped001_nodefiltered.bam") { system("rm -f $dirn/8-hicPipeline/mapped???_nodefiltered.bam"); }
     if (-e "$dirn/8-hicPipeline/align_bwa001.sh") { system("cd $dirn/8-hicPipeline && tar -cf align-bwa-logs.tar align_bwa* && rm -f align_bwa*"); }
+    if (-e "$dirn/8-hicPipeline/hic_nodefiltered.bam") { system("rm -f $dirn/8-hicPipeline/hic_nodefiltered.bam"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.amb")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.amb"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.ann")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.ann"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.bwt")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.bwt"); }
