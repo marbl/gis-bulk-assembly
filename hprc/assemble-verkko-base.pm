@@ -59,6 +59,7 @@ sub createVerkkoBase ($$$$$$$) {
     print CMD "  $rsoft/verkko/bin/verkko --graphaligner $rsoft/graphaligner/bin/GraphAligner --slurm -d $flav \\\n";
     print CMD "    --snakeopts '--until untip' \\\n";
     print CMD "    --ovb-run 8 32 32 \\\n";
+    print CMD "    --red-run 8 100 4 \\\n";
     print CMD "    " . getScreenOption("$rsoft/verkko/bin/verkko") . " \\\n";
     print CMD "    --hifi $hifi \\\n";
     print CMD "    --nano $nano \\\n";
