@@ -197,6 +197,8 @@ sub fetchData ($$$) {
   my $samp  = shift @_;
   my $types = shift @_;
   my $opts  = shift @_;
+  my $maxRetries = 2;    #  Number of retries after the initial attempt (0 = no retries).
+  my $retrySleep = 45;   #  Seconds to wait between retries (30s-1m is reasonable).
 
   system("mkdir -p $data/$samp")   if (! -d "$data/$samp");
 
@@ -244,8 +246,29 @@ sub fetchData ($$$) {
         print "Download requested unknown file type $awsf\n";
         exit(1);
       }
-      my $r = system($c);
-      #print "$c\n";
+      #  Try the download up to ($maxRetries + 1) times.  Sleep between
+      #  attempts so intermittent network issues have a chance to clear.
+      my $r;
+      my $attempt = 0;
+      while (1) {
+        $r = system($c);
+
+        last  if ($r == 0);                       #  Success.
+        last  if ($attempt >= $maxRetries);       #  Exhausted retries; fall through to failure handling.
+
+        $attempt++;
+        printf "                  FAILED (attempt %d of %d, rc=%d), retrying in %ds...\n",
+               $attempt, $maxRetries + 1, $r, $retrySleep;
+        sleep($retrySleep);
+      }
+
+      if ($r == 0) {                             #  If no error, remove the logging
+        unlink "$locf.err";                      #  and continue on to the next file.
+        next;
+      } else {
+        printf "Download failed with return code %d after %d attempt(s)\n",
+               $r, $attempt + 1;
+      }
 
       if ($r == 0) {                             #  If no error, remove the logging
         unlink "$locf.err";                      #  and continue on to the next file.
@@ -254,8 +277,8 @@ sub fetchData ($$$) {
         print "Download failed with return code $r\n";
       }
 
-      rename '$locf',     '$locf.FAILED';        #  If an error, save the failed file and logging,
-      rename '$locf.err', '$locf.FAILED.err';    #  then spit out an error and die.
+      rename "$locf",     "$locf.FAILED";        #  If an error, save the failed file and logging,
+      rename "$locf.err", "$locf.FAILED.err";    #  then spit out an error and die.
 
       print "                  FAILED: '$c'\n";
       open(FAIL, "< $locf.err");
