@@ -27,14 +27,14 @@ use hprc::aws;
 sub getOutputs($) {
   my $odir       =  shift @_;
   my $onam       =  "";
-  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/);
+  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/ && ($doHyb eq "true" || $doHyb eq "1" || $doHyb eq "True"));
 
   if ($hasHybrid) {
      $odir .= "/ont-hifiasm-hybrid-correct";#  Path in local filesystem (or empty if doesn't exist).
-	 $onam  = "r10-hifiasm-correct.ec.ont.fq.gz";
+     $onam  = "r10-hifiasm-correct.ec.ont.fq.gz";
   } else {
      $odir .= "/ont-hifiasm-correct";
-	 $onam  = "r10-hifiasm-correct.ec.fq.gz";
+     $onam  = "r10-hifiasm-correct.ec.fq.gz";
   }
   return ($odir, $hasHybrid, $onam);
 }
@@ -45,10 +45,11 @@ sub getCorrectedFiles($) {
   my %files = getFileMap($samp, $type, 1);
   my $input = scalar(keys %files);
   my ($odir, $hasHybrid, $onam) = getOutputs("$data/$samp");
-  my $exprun   = "$odir/r10-hifiasm-correct.input.fastq.gz";
+  my $expjid   = "$odir/r10-hifiasm-correct.jid";
+  my $exprun   = "$odir/r10-hifiasm-correct.sh";
   my $expected = "$odir/$onam";
 
-  return ((-e $expected || -e $exprun) && $input >= 1) ? "$expected" : "";
+  return ((-e $expected || -e $exprun || -e $expjid) && $input >= 1) ? "$expected" : "";
 }
 
 sub correctONTR10 ($$$$) {
@@ -92,13 +93,12 @@ sub correctONTR10 ($$$$) {
           print CMD "#SBATCH --partition=largemem\n";
        }
        print CMD "#SBATCH --mem=720g\n";
-       print CMD "#SBATCH --time=72:00:00\n";
     } else {
        print CMD "#SBATCH --cpus-per-task=72\n";
        print CMD "#SBATCH --partition=norm\n";
        print CMD "#SBATCH --mem=350g\n";
-       print CMD "#SBATCH --time=120:00:00\n";
     }
+    print CMD "#SBATCH --time=120:00:00\n";
     print CMD "#SBATCH --output=$odir/$onam.err\n";
     print CMD "#SBATCH --job-name=hifia$samp\n";
     print CMD "#\n";
@@ -106,6 +106,7 @@ sub correctONTR10 ($$$$) {
     print CMD "set -o pipefail\n";
     print CMD "set -e\n";
     print CMD "set -x\n";
+    print CMD "trap \"rm -f $onam.jid\" EXIT\n";
     print CMD "\n";
     print CMD "cd $odir\n";
     print CMD "\n";
@@ -192,14 +193,13 @@ sub correctONTR10 ($$$$) {
     print CMD "fi\n";
     print CMD "\n";
     print CMD "rm -f $onam.*.bin\n";
-    print CMD "rm -f $onam.jid\n";
     close(CMD);
   }
 
   my @missing = grep { ! -e $_ } @inputs;
   if    (-e "$odir/$onam.jid")             { print "$samp - RUNNING\n"; }
   elsif (-e "$odir/$onam.err")             { print "$samp - CRASHED\n"; }
-  elsif (-e "$odir/$onam.ec.fq.gz")        { print "$samp - FINISHED\n"; }
+  elsif (-e "$odir/$onam.ec.fq.gz.gzi")    { print "$samp - FINISHED\n"; }
   elsif (@missing)                         { foreach my $missing (@missing) { print "$samp - NOT-FETCHED      - $missing\n"; } }
   elsif ($coverage <= 0)                   { print "$samp - MISSING-SUMMARY-FOR-COVERAGE\n"; }
   elsif (! $submit)                        { print "$samp - READY-TO-COMPUTE\n"; }

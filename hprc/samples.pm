@@ -14,7 +14,7 @@ require Exporter;
 use FindBin;
 
 @ISA    = qw(Exporter);
-@EXPORT = qw(makeAbsolute getParameters loadSamples numFiles dataAvailable $root $data $rasm $rsoft $refn $refc $odb %samples);
+@EXPORT = qw(makeAbsolute getParameters loadSamples numFiles dataAvailable $root $data $rasm $rsoft $refn $refc $odb $doHyb %samples);
 
 use strict;
 use warnings "all";
@@ -29,6 +29,8 @@ our $data  = "/invalid/path";  # now set in main;
 our $refn  = "/invalid/path";  # the reference non-HPC
 our $refc  = "/invalid/path";  # the reference HPC
 our $odb   = "/invalid/path";  # the ODB database to use (e.g. primates_odb10)
+our $doHyb = "true"         ;  # should we allow hybrid correction (ONT+HiFi) if it's available or not
+
 our %samples;
 
 $ENV{'REF_CACHE'} = "$root/hprc-cache/samtools";

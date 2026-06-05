@@ -112,6 +112,7 @@ while (scalar(@ARGV) > 0) {
       $refn  = makeAbsolute($vars{refn}) or die "No reference defined for $v\n";
       $refc  = makeAbsolute($vars{refc}) or die "No reference (HPC) defined for $v\n";
       $odb   = $vars{odb} or die " No ODB database defined for $v\n";
+      $doHyb = $vars{hybridCorrection} or $doHyb="true";
 
       # make sure the paths exist
       if (! -d $root)  { die "Invalid root : $root, check your config\n"; }
