@@ -215,8 +215,19 @@ rm -f tmp tmp? tmp.gfa
 # this is chromosome assignment
 isXY=`grep chrY translation_hap* |wc -l |awk '{print $1}'`
 if [ $isXY -ne 0 ]; then
+   # sort those things we assigned to make sure they are in the right haplotype
    yak sexchr -t 8 $rsoft/yak/chrY-no-par.yak $rsoft/yak/chrX-no-par.yak $rsoft/yak/par.yak ../assembly.haplotype1.fasta ../assembly.haplotype2.fasta > assembly.yak.sexchr
+   # also rescue anything very large that isn't assigned, smaller unassigned we don't want to move in case they introduce duplication/etc
+   # they should be resolved by dedicated post-processing or potentially TTT
+   yak sexchr -t 8 $rsoft/yak/chrY-no-par.yak $rsoft/yak/chrX-no-par.yak $rsoft/yak/par.yak ../assembly.unassigned.fasta ../assembly.unassigned.fasta |grep "^S" |awk '{if ($5 > 1000000) print $0}' >> assembly.yak.sexchr
+
 fi
+
+for asm in assembly.haplotype1 assembly.haplotype2 ; do
+   if [ ! -e $asm.quaak.summary.txt ]; then
+      sh $rsoft/Quaak/src/quaak.sh -t 8 -k $rsoft/Quaak/data/ref.kmer.fa.gz -r $refn -q ../$asm.fasta -o $asm.quaak
+   fi
+done
 
 if [ ! -e assembly.refOriented.fasta ]; then
    sh $marbl_utils/verkko_helpers/reorientByRef.sh assembly-ref.norm.mashmap > assembly-ref.reorient.tsv
@@ -230,12 +241,12 @@ if [ ! -e assembly.refOriented.fasta ]; then
       # we have XY then we use the assignment information to make sure chrX is is haplotype 2 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
       if [ $isXY -ne 0 ]; then
          if [ $parent = "mat" ]; then
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > ignore.tmp
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > include.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' |sort |uniq > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' |sort |uniq > include.tmp
            grep -w -f include.tmp assembly-ref.reorient.tsv > tmp || true
          elif [ $parent = "pat" ]; then
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' > ignore.tmp
-           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' > include.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $8/($7+$8) > 0.5) print $2}' |sort |uniq > ignore.tmp
+           cat assembly.yak.sexchr |grep "^S" | awk '{if ($5 > 0 && $7+$8 > 0 && $6/$5 > 0.9 && $7/($7+$8) > 0.5) print $2}' |sort |uniq > include.tmp
            grep -w -f include.tmp assembly-ref.reorient.tsv > tmp || true
          fi
 	  else

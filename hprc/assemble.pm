@@ -314,7 +314,7 @@ sub computeAssembly ($$) {
     if ($flav eq "canu-hifi")   { $scr = createCanuHiFi     ($samp, $hifi,                      $missing, $unavail =        "", $compl, ""); }
     if ($flav eq "canu-trio")   { $scr = createCanuTrio     ($samp,        $nano, $mati, $pati, $missing, $unavail = $unavailT, $compl, ""); }
 
-    if ($flav =~ /^hifiasm-trio/) { $scr = createHifiasmTrio ($samp, $flav, $hifi, $hifiraw, $nano, $nanoR10,               $missing, $unavail = $unavailT, $compl, ""); }
+    if ($flav =~ /^hifiasm-trio/) { $scr = createHifiasmTrio ($samp, $flav, $hifi, $hifiraw, $nano, $nanoR10,               $missing, $unavail = $yakmerMissing, $compl, ""); }
     if ($flav =~ /^hifiasm-hi-c/) { $scr = createHifiasmHiC  ($samp, $flav, $hifi, $hifiraw, $nano, $nanoR10, $hic1, $hic2, $missing, $unavail = $unavailH, $compl, ""); }
 
     if ($flav eq "verkko-base") { $scr = createVerkkoBase   ($samp, $hifi, $nano,               $missing, $unavail =        "", $compl, $params); }

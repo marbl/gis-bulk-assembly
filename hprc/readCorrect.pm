@@ -24,19 +24,28 @@ use File::Basename;
 use hprc::samples;
 use hprc::aws;
 
-sub getOutputs($) {
-  my $odir       =  shift @_;
+sub getOutputs($$) {
+  my $d          =  shift @_;
+  my $samp       =  shift @_;
+  my $odir       =  "$d/$samp";
   my $onam       =  "";
   my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/ && ($doHyb eq "true" || $doHyb eq "1" || $doHyb eq "True"));
+  my $coverage   = 0;
 
   if ($hasHybrid) {
      $odir .= "/ont-hifiasm-hybrid-correct";#  Path in local filesystem (or empty if doesn't exist).
      $onam  = "r10-hifiasm-correct.ec.ont.fq.gz";
+     my $hifi = getDownloadedFiles($samp, "hifi");   #  Return raw form of hifi data.
+     my $hifiMissing = (($hifi eq "") && (numFiles($samp, "hifi") > 0) ||
+                       scalar(split ' ', $hifi) < numFiles($samp, "hifi"));
+     my %readTypes = $hifiMissing ? ( "ont-r10" => 1 ) : ( "hifi" => 1, "ont-r10" => 1 );
+     $coverage = $hifiMissing ? 0 : getCoverage($samp, \%readTypes);                            # force failure when we're missing HiFi, can edit this and just get coverage and it will work as non-hybrid version
   } else {
+     $coverage = 1;
      $odir .= "/ont-hifiasm-correct";
      $onam  = "r10-hifiasm-correct.ec.fq.gz";
   }
-  return ($odir, $hasHybrid, $onam);
+  return ($odir, $hasHybrid, $onam, $coverage);
 }
 
 sub getCorrectedFiles($) {
@@ -44,12 +53,12 @@ sub getCorrectedFiles($) {
   my $type   = 'ont-r10';
   my %files = getFileMap($samp, $type, 1);
   my $input = scalar(keys %files);
-  my ($odir, $hasHybrid, $onam) = getOutputs("$data/$samp");
+  my ($odir, $hasHybrid, $onam, $coverage) = getOutputs($data, $samp);
   my $expjid   = "$odir/r10-hifiasm-correct.jid";
   my $exprun   = "$odir/r10-hifiasm-correct.sh";
-  my $expected = "$odir/$onam";
+  my $expected = -e $expjid ? "$odir/$onam.gzi" : "$odir/$onam";
 
-  return ((-e $expected || -e $exprun || -e $expjid) && $input >= 1) ? "$expected" : "";
+  return ((-e $expected || -e $exprun || -e $expjid || $coverage == 0) && $input >= 1) ? "$expected" : "";
 }
 
 sub correctONTR10 ($$$$) {
@@ -61,11 +70,10 @@ sub correctONTR10 ($$$$) {
   my @inputs = @$inputs_ref;
 
   # figure out if we have older hifiasm or version supporting hybrid correction
-  my ($odir, $hasHybrid, $ig) = getOutputs($orig);
+  my ($odir, $hasHybrid, $ig, $coverage) = getOutputs($data, $samp);
   my $hifiMissing;
   my $hifi;
   my $extraArgs;
-  my $coverage = 1;
   if ($hasHybrid) {
      $hifi = getDownloadedFiles($samp, "hifi");   #  Return raw form of hifi data.
      $hifiMissing = (($hifi eq "") && (numFiles($samp, "hifi") > 0) ||
@@ -73,8 +81,6 @@ sub correctONTR10 ($$$$) {
     if ($hifiMissing) {
        print "ERROR: $samp: have hybrid hifiasm from $rsoft/hifiasm/hifiasm but HiFi data is not available, not doing hybrid correction!\n" if $hifiMissing;
     }
-    my %readTypes = $hifiMissing ? ( "ont-r10" => 1 ) : ( "hifi" => 1, "ont-r10" => 1 );
-    $coverage = $hifiMissing ? 0 : getCoverage($samp, \%readTypes);                            # force failure when we're missing HiFi, can edit this and just get coverage and it will work as non-hybrid version
   }
 
   if ($coverage > 0 && ! -e "$odir/$onam.sh") {
@@ -216,9 +222,9 @@ sub correctReads ($$) {
   my %files  = getFileMap($samp, $type, 1);
   my $input  = scalar(keys %files);
   my $idir   = "$data/$samp";
-  my ($odir, $hasHybrid, $onam) = getOutputs($idir);
+  my ($odir, $hasHybrid, $onam) = getOutputs($data, $samp);
   my @missing = grep { ! -e $_ } (values %files);
-  if (-e "$odir/$onam")        { print "$samp - FINISHED\n"; }
+  if (-e "$odir/$onam.gzi")        { print "$samp - FINISHED\n"; }
   elsif ($input == 0)  {   print "$samp - NO APPROPRIATE READ TYPE FOUND - CHECK FOR '$type' DATA\n";}
   elsif (@missing)  {   foreach my $missing (@missing) { print "$samp - NOT-FETCHED      - $missing\n"; } }
   else              {   correctONTR10($samp, [values %files], $idir, $submit); }

@@ -187,8 +187,7 @@ sub cleanupAssembly ($$) {
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.bwt")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.bwt"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.pac")  { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.pac"); }
     if (-e "$dirn/8-hicPipeline/unitigs.fasta.sa")   { system("rm -f $dirn/8-hicPipeline/unitigs.fasta.sa"); }
-    if (-e "$dirn/8-hicPipeline/unitigs.fasta")      { system("pigz $dirn/8-hicPipeline/unitigs.fasta"); }
-    if (-e "$dirn/8-hicPipeline/paths.hpc.fasta")    { system("rm -f $dirn/8-hicPipeline/paths.hpc.fasta"); }
+    if (-e "$dirn/8-hicPipeline/unitigs.fasta")      { system("bgzip $dirn/8-hicPipeline/unitigs.fasta"); }
 
     foreach my $f (glob("$dirn/*.bin")) {
        system("rm -f $f");

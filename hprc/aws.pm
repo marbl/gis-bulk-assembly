@@ -260,6 +260,7 @@ sub fetchData ($$$) {
         printf "                  FAILED (attempt %d of %d, rc=%d), retrying in %ds...\n",
                $attempt, $maxRetries + 1, $r, $retrySleep;
         sleep($retrySleep);
+        $retrySleep *= 2;
       }
 
       if ($r == 0) {                             #  If no error, remove the logging

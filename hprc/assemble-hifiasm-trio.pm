@@ -33,7 +33,7 @@ sub createHifiasmTrio ($$$$$$$$$$) {
   my $sdir    = "$rasm/$samp";
 
   # figure out if we have older hifiasm or version supporting hybrid correction
-  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1 1>/dev/null` =~ /--hf/);
+  my $hasHybrid = (`$rsoft/hifiasm/hifiasm 2>&1` =~ /--hf/);
 
   if (!$missi && !$compl && !$unava && !-e "$sdir/$flav.sh") {
     system("mkdir -p $sdir")  if (! -d $sdir);
@@ -41,15 +41,15 @@ sub createHifiasmTrio ($$$$$$$$$$) {
     open(CMD, "> $sdir/$flav.sh") or die "Failed to open '$sdir/$flav.sh' for writing: $!\n";
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
-    if ($hasHybrid) { # requires more memory/time
+    if ($hasHybrid && $flav =~ /nano$/) { # requires more memory/time
        print CMD "#SBATCH --cpus-per-task=72\n";
        print CMD "#SBATCH --partition=largemem\n";
-       print CMD "#SBATCH --mem=1000g\n";
-       print CMD "#SBATCH --time=240:00:00\n";
+       print CMD "#SBATCH --mem=750g\n";
+       print CMD "#SBATCH --time=120:00:00\n";
     } else {
        print CMD "#SBATCH --cpus-per-task=48\n";
        print CMD "#SBATCH --partition=norm\n";
-       print CMD "#SBATCH --mem=300g\n";
+       print CMD "#SBATCH --mem=340g\n";
        print CMD "#SBATCH --time=120:00:00\n";
     }
     print CMD "#SBATCH --output=$sdir/$flav.%j.log\n";
@@ -94,8 +94,7 @@ sub createHifiasmTrio ($$$$$$$$$$) {
           print CMD "   done\n";
           print CMD "   ) | bgzip -@ \$SLURM_CPUS_PER_TASK -l 9 -i -c -I $flav/hifi.input.fastq.gz.gzi - > $flav/hifi.input.fastq.gz \n";
           my %readTypes =  { "hifi" => 1, "ont-r10" => 1 };
-          my $coverage = getCoverage($samp, \%readTypes);
-          $extraArgs="--hf $odir/hifi.input.fastq.gz \\\n        --hom-cov $coverage --chn-occ 3"
+          $extraArgs="--hf $odir/hifi.input.fastq.gz \\\n"
        }
     }
     print CMD "   (\n";

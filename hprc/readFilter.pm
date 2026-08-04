@@ -42,6 +42,7 @@ sub filterHiFi ($$$$$$$) {
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=24\n";
     print CMD "#SBATCH --mem=32g\n";
+    print CMD "#SBATCH --partition=norm,quick\n";
     print CMD "#SBATCH --time=4:00:00\n";
     print CMD "#SBATCH --output=$odir/$onam.err\n";
     print CMD "#SBATCH --job-name=cutada$lnam\n";

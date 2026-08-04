@@ -48,7 +48,7 @@ sub startRibotinAnalysis($$) {
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
     print CMD "#SBATCH --cpus-per-task=8\n";
-    print CMD "#SBATCH --mem=20g\n";
+    print CMD "#SBATCH --mem=50g\n";
     print CMD "#SBATCH --time=10:00:00\n";
     print CMD "#SBATCH --output=$diro/ribotin.%j.err\n";
     print CMD "#SBATCH --job-name=rib$samp\n";
@@ -62,6 +62,8 @@ sub startRibotinAnalysis($$) {
     print CMD "module load lbzip2\n";
     print CMD "module load samtools\n";
     print CMD "module load seqtk\n";
+    print CMD "module load liftoff\n";
+    print CMD "module load winnowmap\n";
     print CMD "\n";
     print CMD "\n";
     print CMD "if [ ! -e ../assembly.homopolymer-compressed.gfa ]; then\n";
