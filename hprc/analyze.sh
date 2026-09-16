@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=150g
 #SBATCH --time=4:00:00
-#SBATCH --partition=norm,quick
+#SBATCH --partition=med
 #SBATCH --output=./analysis.err
 #SBATCH --job-name=va$1
 #
@@ -235,7 +235,7 @@ if [ ! -e assembly.refOriented.fasta ]; then
    grep -w -v -f tmp ../assembly.fasta.fai |awk '{print $1"\t0\t"$2}' >>  assembly-ref.reorient.tsv
    rm ./tmp
 
-   java -cp /data/korens/devel/utils:. SubFasta  assembly-ref.reorient.tsv ../assembly.fasta >  assembly.refOriented.fasta
+   java -cp $rsoft/utils:. SubFasta  assembly-ref.reorient.tsv ../assembly.fasta >  assembly.refOriented.fasta
    for i in `seq 1 2`; do
       parent=`echo $i |awk '{if ($1 == 2) print "mat"; else print "pat"}'`
       # we have XY then we use the assignment information to make sure chrX is is haplotype 2 (this is checking $6/$5 which is fraction of sex markers is hight and $7/($7+$8) is more Y chr than X markers while $8/($7+$8) is more X than Y
@@ -259,7 +259,7 @@ if [ ! -e assembly.refOriented.fasta ]; then
       grep -v chr  assembly-ref.reorient.tsv |grep "$parent" >> tmp || true
       grep -v chr  assembly-ref.reorient.tsv |grep "haplotype$i" >> tmp || true
       cat tmp | sort |uniq | grep -w -v -f ignore.tmp > tmp2 || true
-      java -cp /data/korens/devel/utils:. SubFasta tmp2 ../assembly.fasta > assembly.refOriented.haplotype$i.fasta
+      java -cp $rsoft/utils:. SubFasta tmp2 ../assembly.fasta > assembly.refOriented.haplotype$i.fasta
 
       rm -f ./tmp? ./ignore.tmp ./include.tmp
    done
