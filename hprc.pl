@@ -32,6 +32,7 @@ use hprc::yakmers;
 use hprc::assemble;
 use hprc::analyze;
 use hprc::ribotin;
+use hprc::mitohifi;
 
 
 my @errs;
@@ -167,6 +168,7 @@ while (scalar(@ARGV) > 0) {
           ($mode eq "hapmers") ||
           ($mode eq "yakmers") ||
           ($mode eq "ribotin") ||
+	  ($mode eq "mitohifi") ||
           ($mode eq "assemble") ||
           ($mode eq "analyze")) && ($arg eq "--submit")) {
     $opts{"submit"} = 1;
@@ -314,6 +316,7 @@ if (($mode ne "help") &&
     ($mode ne "hapmers") &&
     ($mode ne "yakmers") &&
     ($mode ne "ribotin") &&
+    ($mode ne "mitohifi") &&
     ($mode ne "assemble") &&
     ($mode ne "analyze")) {
   push @errs, "Invalid mode '$mode'.";
@@ -467,6 +470,18 @@ elsif ($mode eq "ribotin") {
     }
     else {
       startRibotinAnalysis($s, \%opts);
+    }
+  }
+}
+
+elsif ($mode eq "mitohifi") {
+  foreach my $s (sort keys %sampleList) {
+    if (($opts{"flavor"} eq "") || ($opts{"flavor"} eq "verkko-full")) {
+      $opts{"flavor"} = "verkko-hi-c";  startMitohifiAnalysis($s, \%opts);
+      $opts{"flavor"} = "";
+    }
+    else {
+      startMitohifiAnalysis($s, \%opts);
     }
   }
 }
