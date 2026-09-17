@@ -32,7 +32,7 @@ sub startMitohifiAnalysis($$) {
 
   #  Check if outputs exist.
 
-  my $finished = -e "$diro/mitohifi.out";
+  my $finished = -e "$diro/mitohifi.complete";
 
   #  Check that inputs exist.
 
@@ -56,6 +56,9 @@ sub startMitohifiAnalysis($$) {
     print CMD "#\n";
     print CMD "set -e\n";
     print CMD "set -x\n";
+    print CMD "set -o pipefail\n";
+    print CMD "\n";
+    print CMD "trap 'rm -f $diro/mitohifi.jid; [[ -f $diro/mitohifi.complete ]] || touch $diro/mitohifi.FAIL' EXIT\n";
     print CMD "\n";
     print CMD "mkdir -p $diro\n";
     print CMD "cd       $diro\n";
@@ -66,7 +69,7 @@ sub startMitohifiAnalysis($$) {
     print CMD "module load apptainer\n";
     print CMD "\n";
     print CMD "\n";
-    print CMD "if [ ! -e mitohifi.out ] ; then\n";
+    print CMD "if [ ! -e mitohifi.complete ] ; then\n";
     # get the tig ID
     print CMD "TIG_ID=`head -n 1 ../assembly.mito.exemplar.fasta |awk '{print substr(\$1, 2, length(\$1))}'`\n";
     # extract the reads
@@ -90,9 +93,8 @@ sub startMitohifiAnalysis($$) {
     print CMD "        -mv -Ov \\\n";
     print CMD "        --ploidy 1 \\\n";
     print CMD "        -o ${samp}_mito_asm_on_reference.vcf\n";
+    print CMD "touch mitohifi.complete\n";
     print CMD "fi\n";
-    print CMD "\n";
-    print CMD "rm -f ./mitohifi.jid\n";
     print CMD "\n";
     print CMD "exit 0\n";
   }
