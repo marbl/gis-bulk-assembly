@@ -63,27 +63,28 @@ sub startMitohifiAnalysis($$) {
     print CMD "module load minimap2\n";
     print CMD "module load samtools\n";
     print CMD "module load seqtk\n";
+    print CMD "module load apptainer\n";
     print CMD "\n";
     print CMD "\n";
     print CMD "if [ ! -e mitohifi.out ] ; then\n";
     # get the tig ID
     print CMD "TIG_ID=`head -n 1 ../assembly.mito.exemplar.fasta |awk '{print substr(\$1, 2, length(\$1))}'`\n";
     # extract the reads
-    print CMD "python $rsoft/mitohifi/src/extract_reads_from_verkko.py \$TIG_ID ../assembly.scfmap ../assembly.homopolymer-compressed.layout reads.ids\n";
+    print CMD "python $rsoft/MitoHiFi/src/extract_reads_from_verkko.py \$TIG_ID ../assembly.scfmap ../assembly.homopolymer-compressed.layout reads.ids\n";
     print CMD "zcat $hifi | seqtk subseq - reads.ids > reads.WORKING.fasta && mv reads.WORKING.fasta reads.fasta\n";
-    print CMD "$rsoft/mitohifi/bin/mitohifi -r reads.fasta -f /patched/MitoHiFi/resources/sequence.fasta -g /patched/MitoHiFi/resources/sequence.gb -t \$SLURM_CPUS_PER_TASK -o 2 -a animal -p 90 --rotate-to-ref\n";
+    print CMD "$rsoft/MitoHiFi/bin/mitohifi -r reads.fasta -f /patched/MitoHiFi/resources/sequence.fasta -g /patched/MitoHiFi/resources/sequence.gb -t \$SLURM_CPUS_PER_TASK -o 2 -a animal -p 90 --rotate-to-ref\n";
     print CMD "minimap2 \\\n";
     print CMD "   -t\$SLURM_CPUS_PER_TASK \\\n";
     print CMD "   --secondary=no \\\n";
     print CMD "   -ax asm5 \\\n";
-    print CMD "   $rsoft/mitohifi/resources/sequence.fasta \\\n";
+    print CMD "   $rsoft/MitoHiFi/resources/sequence.fasta \\\n";
     print CMD "   ./final_mitogenome.fasta \\\n";
     print CMD "   | samtools view -Sb \\\n";
     print CMD "   | samtools sort - \\\n";
     print CMD "   > ${samp}_mito_asm_on_reference.bam \n";
     print CMD "samtools index ${samp}_mito_asm_on_reference.bam\n";
     print CMD "bcftools mpileup \\\n";
-    print CMD "   -f $rsoft/mitohifi/resources/sequence.fasta \\\n";
+    print CMD "   -f $rsoft/MitoHiFi/resources/sequence.fasta \\\n";
     print CMD "   ${samp}_mito_asm_on_reference.bam  \\\n";
     print CMD "  | bcftools call \\\n";
     print CMD "        -mv -Ov \\\n";
