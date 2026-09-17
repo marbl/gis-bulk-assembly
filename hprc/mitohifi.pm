@@ -80,7 +80,7 @@ sub startMitohifiAnalysis($$) {
     print CMD "   ./final_mitogenome.fasta \\\n";
     print CMD "   | samtools view -Sb \\\n";
     print CMD "   | samtools sort - \\\n";
-    print CMD "   > ${samp}_mito_asm_on_reference.bam \\\n";
+    print CMD "   > ${samp}_mito_asm_on_reference.bam \n";
     print CMD "samtools index ${samp}_mito_asm_on_reference.bam\n";
     print CMD "bcftools mpileup \\\n";
     print CMD "   -f $rsoft/mitohifi/resources/sequence.fasta \\\n";
