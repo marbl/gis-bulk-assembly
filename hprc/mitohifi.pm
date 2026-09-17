@@ -47,9 +47,10 @@ sub startMitohifiAnalysis($$) {
     open(CMD, "> $diro/mitohifi.sh") or die "Failed to open '$diro/mitohifi.sh' for writing: $!\n";
     print CMD "#!/bin/sh\n";
     print CMD "#\n";
-    print CMD "#SBATCH --cpus-per-task=8\n";
+    print CMD "#SBATCH --cpus-per-task=4\n";
     print CMD "#SBATCH --mem=50g\n";
-    print CMD "#SBATCH --time=10:00:00\n";
+    print CMD "#SBATCH --time=1:00:00\n";
+    print CMD "#SBATCH --partition=quick\n";
     print CMD "#SBATCH --output=$diro/mitohifi.%j.err\n";
     print CMD "#SBATCH --job-name=mit$samp\n";
     print CMD "#\n";
@@ -78,11 +79,11 @@ sub startMitohifiAnalysis($$) {
     print CMD "   $rsoft/mitohifi/resources/sequence.fasta \\\n";
     print CMD "   ./final_mitogenome.fasta \\\n";
     print CMD "   | samtools view -Sb \\\n";
-    print CMD "   | samtools sort \\\n";
+    print CMD "   | samtools sort - \\\n";
     print CMD "   > ${samp}_mito_asm_on_reference.bam \\\n";
     print CMD "samtools index ${samp}_mito_asm_on_reference.bam\n";
     print CMD "bcftools mpileup \\\n";
-    print CMD "   -f $rsoft/resources/sequence.fasta \\\n";
+    print CMD "   -f $rsoft/mitohifi/resources/sequence.fasta \\\n";
     print CMD "   ${samp}_mito_asm_on_reference.bam  \\\n";
     print CMD "  | bcftools call \\\n";
     print CMD "        -mv -Ov \\\n";
